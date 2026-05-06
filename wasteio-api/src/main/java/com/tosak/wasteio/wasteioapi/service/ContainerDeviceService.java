@@ -1,30 +1,30 @@
 package com.tosak.wasteio.wasteioapi.service;
 
-import com.tosak.wasteio.wasteioapi.model.ContainerDevice;
-import com.tosak.wasteio.wasteioapi.repository.ContainerDeviceRepository;
+import com.tosak.wasteio.wasteioapi.model.Container;
+import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
 public class ContainerDeviceService {
-    private final ContainerDeviceRepository repository;
+    private final ContainerRepository repository;
 
-    public ContainerDeviceService(ContainerDeviceRepository repository) {
+    public ContainerDeviceService(ContainerRepository repository) {
         this.repository = repository;
     }
 
-    public ContainerDevice addDevice(ContainerDevice device) {
+    public Container addDevice(Container device) {
         if (repository.existsById(device.getId())) {
             throw new RuntimeException("Device with id " + device.getId() + " already exists");
         }
         return repository.save(device);
     }
 
-    public List<ContainerDevice> getAllDevices() {
+    public List<Container> getAllDevices() {
         return repository.findAll();
     }
 
-    public ContainerDevice getDeviceById(String id) {
+    public Container getDeviceById(String id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Device not found: " + id));
     }
@@ -36,7 +36,7 @@ public class ContainerDeviceService {
         repository.deleteById(id);
     }
 
-    public ContainerDevice updateDevice(String id, ContainerDevice device) {
+    public Container updateDevice(String id, Container device) {
         if (!repository.existsById(id)) {
             throw new RuntimeException("Device not found: " + id);
         }

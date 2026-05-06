@@ -1,18 +1,23 @@
 package com.tosak.wasteio.wasteioapi.mqtt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tosak.wasteio.wasteioapi.repository.ContainerDeviceRepository;
+import com.tosak.wasteio.wasteioapi.model.Telemetry;
+import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
+import com.tosak.wasteio.wasteioapi.repository.TelemetryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 
+import java.time.ZonedDateTime;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class MqttMessageHandler {
-    private final ContainerDeviceRepository repository;
+    private final ContainerRepository containerRepository;
+    private final TelemetryRepository telemetryRepository;
     private final ObjectMapper objectMapper;
 
     @ServiceActivator(inputChannel = "mqttInputChannel")
@@ -25,14 +30,22 @@ public class MqttMessageHandler {
             TelemetryMessage telemetry =
                     objectMapper.readValue(payload, TelemetryMessage.class);
 
-            repository.findById(telemetry.getContainerId()).ifPresentOrElse(
-                    device -> {
+            containerRepository.findById(telemetry.getContainerId()).ifPresentOrElse(
+                    container -> {
 
-                        double oldLevel = device.getFillLevel();
+                        double oldLevel = container.getLatestFillLevel();
 
-                        device.setFillLevel(telemetry.getFillLevel());
+                        container.setLatestFillLevel(telemetry.getFillLevel());
 
-                        repository.save(device);
+                        containerRepository.save(container);
+                        
+                        telemetryRepository.save(
+                                new Telemetry(container,
+                                        telemetry.getFillLevel(),
+                                        telemetry.getBatteryLevel(),
+                                        ZonedDateTime.parse(telemetry.getTimestamp()).toLocalDateTime()
+                                        )
+                        );
 
                         log.info("Device updated {} - fillLevel: {} -> {}",
                                 telemetry.getContainerId(),

@@ -1,6 +1,6 @@
 package com.tosak.wasteio.wasteioapi.controller;
 
-import com.tosak.wasteio.wasteioapi.model.ContainerDevice;
+import com.tosak.wasteio.wasteioapi.model.Container;
 import com.tosak.wasteio.wasteioapi.service.ContainerDeviceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,23 +17,23 @@ public class ContainerDeviceController {
     }
 
     @PostMapping
-    public ResponseEntity<ContainerDevice> addDevice(@RequestBody ContainerDevice device) {
+    public ResponseEntity<Container> addDevice(@RequestBody Container device) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.addDevice(device));
     }
 
     @GetMapping
-    public ResponseEntity<List<ContainerDevice>> getAll() {
+    public ResponseEntity<List<Container>> getAll() {
         return ResponseEntity.ok(service.getAllDevices());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ContainerDevice> getById(@PathVariable String id) {
+    public ResponseEntity<Container> getById(@PathVariable String id) {
         return ResponseEntity.ok(service.getDeviceById(id));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ContainerDevice> update(@PathVariable String id,
-                                                  @RequestBody ContainerDevice device) {
+    public ResponseEntity<Container> update(@PathVariable String id,
+                                            @RequestBody Container device) {
         return ResponseEntity.ok(service.updateDevice(id, device));
     }
 
