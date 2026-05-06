@@ -1,0 +1,64 @@
+###
+POST http://localhost:8080/api/devices
+Content-Type: application/json
+
+{
+  "id": "container-001",
+  "name": "Контејнер Центар",
+  "longitude": 21.4254,
+  "latitude": 41.9981,
+  "fillLevel": 0.0
+}
+
+###
+POST http://localhost:8080/api/devices
+Content-Type: application/json
+
+{
+  "id": "container-002",
+  "name": "Контејнер Карпош",
+  "longitude": 21.3991,
+  "latitude": 42.0041,
+  "fillLevel": 0.0
+}
+
+###
+
+POST http://localhost:8080/api/devices
+Content-Type: application/json
+
+{
+  "id": "container-003",
+  "name": "Контејнер Аеродром",
+  "longitude": 21.4812,
+  "latitude": 41.9734,
+  "fillLevel": 0.0
+}
+
+###
+
+GET http://localhost:8080/api/devices
+
+###
+
+GET http://localhost:8080/api/devices/container-001
+
+###
+
+PUT http://localhost:8080/api/devices/container-001
+Content-Type: application/json
+
+{
+  "name": "Контејнер Центар ИЗМЕНЕТ",
+  "longitude": 21.4300,
+  "latitude": 41.9900,
+  "fillLevel": 0.75
+}
+
+###
+
+DELETE http://localhost:8080/api/devices/container-001
+
+###
+
+GET http://localhost:8080/api/devices/container-001
