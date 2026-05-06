@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pickup Routes - EcoSkopje</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Host Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            black: '#0c0d0d',
+                            green: '#ecf4ee',
+                            gray: '#fafafa',
+                            white: '#ffffff',
+                            accent: '#86efac',
+                            accentDark: '#22c55e',
+                            darkBg: '#111217',
+                            darkPanel: '#1a1d24',
+                            darkBorder: '#2a2e39',
+                            purple: '#6d28d9',
+                            purpleLight: '#8b5cf6'
+                        },
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        gray: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: '#111827',
+                        },
+                        danger: {
+                            50: '#fef2f2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                        },
+                        warning: {
+                            50: '#fffbeb',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'card': '0 2px 10px rgba(0, 0, 0, 0.02)',
+                        'floating': '0 10px 40px -10px rgba(0,0,0,0.1)',
+                        'glow': '0 0 15px rgba(109, 40, 217, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { font-family: 'Host Grotesk', sans-serif; overflow: hidden; background-color: #111217; color: #f3f4f6; }
+        .glass-panel {
+            background: rgba(26, 29, 36, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .map-bg {
+            background-image: url('https://storage.googleapis.com/uxpilot-auth.appspot.com/95f195bcee-b59656394b6c913db66d.png');
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.7) contrast(1.2);
+        }
+        .route-line {
+            stroke-dasharray: 10;
+            animation: dash 20s linear infinite;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+    </style>
+</head>
+<body class="w-full h-screen flex m-0 overflow-hidden text-gray-100 bg-brand-darkBg">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="w-20 lg:w-64 bg-brand-darkPanel border-r border-brand-darkBorder flex flex-col h-full flex-shrink-0 transition-all duration-300 z-50">
+        <!-- Logo -->
+        <div class="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-brand-darkBorder flex-shrink-0">
+            <a href="#" class="inline-flex items-center gap-3 group">
+                <div class="w-10 h-10 bg-brand-purple rounded-xl flex items-center justify-center text-brand-white shadow-glow group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-leaf text-xl text-white"></i>
+                </div>
+                <span class="text-xl font-bold text-white tracking-tight hidden lg:block">EcoSkopje</span>
+            </a>
+        </div>
+
+        <!-- User Profile Mini -->
+        <div class="p-4 border-b border-brand-darkBorder hidden lg:block">
+            <div class="flex items-center gap-3 px-2 py-2 rounded-xl transition-colors bg-brand-darkBg/50 border border-brand-darkBorder">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="User" class="w-10 h-10 rounded-full object-cover border-2 border-brand-darkPanel shadow-sm">
+                <div class="overflow-hidden">
+                    <p class="text-sm font-semibold text-white truncate">Marko K.</p>
+                    <p class="text-xs text-gray-400 truncate">Admin</p>
+                </div>
+                <button class="ml-auto text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Nav Links -->
+        <nav class="flex-1 overflow-y-auto py-6 px-3 lg:px-4 space-y-2">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3 hidden lg:block">Menu</div>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-brand-darkBg hover:text-white font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-brand-darkPanel transition-all">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <span class="hidden lg:block">Map Overview</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl bg-brand-purple/10 text-brand-purpleLight font-medium transition-colors group border border-brand-purple/20 shadow-glow">
+                <div class="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+                <span class="hidden lg:block">Pickup Routes</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-brand-darkBg hover:text-white font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-brand-darkPanel transition-all">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+                <span class="hidden lg:block">Containers</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-brand-darkBg hover:text-white font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-brand-darkPanel transition-all relative">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </div>
+                <span class="hidden lg:block flex-1">Alerts</span>
+                <span class="hidden lg:flex items-center justify-center bg-red-500/20 text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">2 New</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-brand-darkBg hover:text-white font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-brand-darkPanel transition-all">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <span class="hidden lg:block">Reports</span>
+            </a>
+
+            <div class="mt-8 mb-4">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3 hidden lg:block">Support</div>
+                
+                <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-400 hover:bg-brand-darkBg hover:text-white font-medium transition-colors group">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-brand-darkPanel transition-all">
+                        <i class="fa-solid fa-gear"></i>
+                    </div>
+                    <span class="hidden lg:block">Settings</span>
+                </a>
+            </div>
+            
+            <!-- Premium Promo Card (Inspiration from image) -->
+            <div class="mt-auto hidden lg:block p-4 bg-gradient-to-b from-brand-darkBg to-brand-darkPanel border border-brand-darkBorder rounded-2xl relative overflow-hidden">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-brand-purple/20 rounded-full blur-2xl"></div>
+                <div class="flex justify-center mb-4 relative z-10">
+                    <img class="w-16 h-16 object-contain" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/fdb1083823-3b16f0c374bf5f87f9b2.png" alt="3d rocket illustration glowing vibrant colors dark background minimal" />
+                </div>
+                <h4 class="text-center font-bold text-white mb-1">Eco Pro Plan</h4>
+                <p class="text-center text-xs text-gray-400 mb-4">Advanced route optimization & analytics</p>
+                <button class="w-full py-2 bg-brand-darkBg border border-brand-purple/30 text-brand-purpleLight rounded-xl text-sm font-medium hover:bg-brand-purple hover:text-white transition-all shadow-glow">
+                    Upgrade Now
+                </button>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 relative h-full flex flex-col bg-brand-darkBg overflow-hidden">
+        
+        <!-- Header -->
+        <header id="page-header" class="h-20 flex justify-between items-center px-6 bg-brand-darkPanel border-b border-brand-darkBorder flex-shrink-0">
+            <div>
+                <h1 class="text-2xl font-bold text-white">Pickup Routes</h1>
+                <p class="text-sm text-gray-400">Skopje Central District • Suggested optimizations</p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Top Actions -->
+                <div class="flex items-center gap-2 bg-brand-darkBg p-1 rounded-xl border border-brand-darkBorder">
+                    <button class="w-9 h-9 rounded-lg bg-brand-darkPanel text-gray-400 hover:text-white flex items-center justify-center transition-colors">
+                        <i class="fa-regular fa-sun"></i>
+                    </button>
+                    <button class="w-9 h-9 rounded-lg bg-brand-purple/20 text-brand-purpleLight flex items-center justify-center shadow-glow transition-colors">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+                
+                <div class="flex items-center gap-2 bg-brand-darkBg px-3 py-2 rounded-xl border border-brand-darkBorder text-green-400 font-medium text-sm">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>System Optimal</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Split -->
+        <div class="flex-1 flex overflow-hidden">
+            
+            <!-- Left Panel: Routes List & Filters -->
+            <div class="w-full lg:w-[400px] xl:w-[450px] flex flex-col border-r border-brand-darkBorder bg-brand-darkPanel flex-shrink-0 h-full overflow-hidden">
+                
+                <!-- Filter Bar -->
+                <div class="p-4 border-b border-brand-darkBorder bg-brand-darkBg/50">
+                    <div class="relative bg-brand-darkBg rounded-xl flex items-center p-2 border border-brand-darkBorder mb-3">
+                        <div class="pl-2 text-gray-500">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <input type="text" placeholder="Search routes, drivers, or zones..." class="w-full bg-transparent border-none focus:outline-none focus:ring-0 px-3 py-1 text-sm text-white placeholder-gray-500">
+                        <button class="w-8 h-8 rounded-lg bg-brand-darkPanel text-gray-400 flex items-center justify-center hover:text-white border border-brand-darkBorder">
+                            <i class="fa-solid fa-sliders"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                        <button class="px-3 py-1.5 rounded-lg bg-brand-purple text-white text-xs font-medium whitespace-nowrap shadow-glow">
+                            All Routes
+                        </button>
+                        <button class="px-3 py-1.5 rounded-lg bg-brand-darkBg border border-brand-darkBorder text-gray-400 hover:text-white text-xs font-medium whitespace-nowrap transition-colors">
+                            High Priority
+                        </button>
+                        <button class="px-3 py-1.5 rounded-lg bg-brand-darkBg border border-brand-darkBorder text-gray-400 hover:text-white text-xs font-medium whitespace-nowrap transition-colors">
+                            Morning Shift
+                        </button>
+                        <button class="px-3 py-1.5 rounded-lg bg-brand-darkBg border border-brand-darkBorder text-gray-400 hover:text-white text-xs font-medium whitespace-nowrap transition-colors">
+                            Trucks Only
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Routes List -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                    
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex justify-between items-center">
+                        <span>Suggested Routes</span>
+                        <span class="bg-brand-darkBg px-2 py-0.5 rounded text-gray-400">3 Available</span>
+                    </div>
+
+                    <!-- Route Card 1 (Active/Selected) -->
+                    <div class="bg-brand-darkBg border border-brand-purple rounded-2xl p-4 cursor-pointer relative overflow-hidden group shadow-glow">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-brand-purple/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                        
+                        <div class="flex justify-between items-start mb-3 relative z-10">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-brand-purple/20 text-brand-purpleLight flex items-center justify-center border border-brand-purple/30">
+                                    <i class="fa-solid fa-truck-fast"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">Centar District Alpha</h3>
+                                    <p class="text-xs text-gray-400">Vehicle: TRK-04 (Large)</p>
+                                </div>
+                            </div>
+                            <span class="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-1 rounded-lg border border-red-500/30 flex items-center gap-1">
+                                <i class="fa-solid fa-fire text-[10px]"></i> High Urgency
+                            </span>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2 mb-4 relative z-10">
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-xs text-gray-500 mb-1">Stops</div>
+                                <div class="text-sm font-bold text-white">24</div>
+                            </div>
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-xs text-gray-500 mb-1">Distance</div>
+                                <div class="text-sm font-bold text-white">12.4 km</div>
+                            </div>
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-xs text-gray-500 mb-1">Est. Time</div>
+                                <div class="text-sm font-bold text-white">2h 15m</div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center text-xs text-gray-400 mb-3 relative z-10">
+                            <div class="flex items-center gap-1">
+                                <div class="w-2 h-2 rounded-full bg-red-500"></div> 18 Full
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div class="w-2 h-2 rounded-full bg-yellow-500"></div> 6 Moderate
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div class="w-2 h-2 rounded-full bg-green-500"></div> 0 Empty
+                            </div>
+                        </div>
+
+                        <button class="w-full bg-brand-purple hover:bg-brand-purpleLight text-white font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 relative z-10 shadow-lg">
+                            <i class="fa-solid fa-play"></i> Start Route
+                        </button>
+                    </div>
+
+                    <!-- Route Card 2 -->
+                    <div class="bg-brand-darkBg border border-brand-darkBorder rounded-2xl p-4 cursor-pointer hover:border-gray-600 transition-colors">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-brand-darkPanel text-gray-400 flex items-center justify-center border border-brand-darkBorder">
+                                    <i class="fa-solid fa-truck"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">Karposh Sector B</h3>
+                                    <p class="text-xs text-gray-400">Vehicle: VAN-02 (Medium)</p>
+                                </div>
+                            </div>
+                            <span class="bg-yellow-500/20 text-yellow-500 text-xs font-bold px-2 py-1 rounded-lg border border-yellow-500/30">
+                                Normal
+                            </span>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-sm font-bold text-white">15</div>
+                                <div class="text-[10px] text-gray-500">Stops</div>
+                            </div>
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-sm font-bold text-white">8.2 km</div>
+                                <div class="text-[10px] text-gray-500">Dist</div>
+                            </div>
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-sm font-bold text-white">1h 30m</div>
+                                <div class="text-[10px] text-gray-500">ETA</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Route Card 3 -->
+                    <div class="bg-brand-darkBg border border-brand-darkBorder rounded-2xl p-4 cursor-pointer hover:border-gray-600 transition-colors">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-brand-darkPanel text-gray-400 flex items-center justify-center border border-brand-darkBorder">
+                                    <i class="fa-solid fa-truck"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold">Aerodrom Morning</h3>
+                                    <p class="text-xs text-gray-400">Vehicle: TRK-01 (Large)</p>
+                                </div>
+                            </div>
+                            <span class="bg-green-500/20 text-green-400 text-xs font-bold px-2 py-1 rounded-lg border border-green-500/30">
+                                Low
+                            </span>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-sm font-bold text-white">32</div>
+                                <div class="text-[10px] text-gray-500">Stops</div>
+                            </div>
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-sm font-bold text-white">18.5 km</div>
+                                <div class="text-[10px] text-gray-500">Dist</div>
+                            </div>
+                            <div class="bg-brand-darkPanel rounded-lg p-2 border border-brand-darkBorder text-center">
+                                <div class="text-sm font-bold text-white">3h 10m</div>
+                                <div class="text-[10px] text-gray-500">ETA</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Right Panel: Map & Route Details Drawer -->
+            <div class="flex-1 relative flex flex-col">
+                
+                <!-- Map Area -->
+                <div class="flex-1 relative map-bg">
+                    <!-- Map Controls -->
+                    <div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
+                        <button class="w-10 h-10 bg-brand-darkPanel border border-brand-darkBorder rounded-xl text-white shadow-lg flex items-center justify-center hover:bg-brand-darkBg transition-colors">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <button class="w-10 h-10 bg-brand-darkPanel border border-brand-darkBorder rounded-xl text-white shadow-lg flex items-center justify-center hover:bg-brand-darkBg transition-colors">
+                            <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <button class="w-10 h-10 bg-brand-darkPanel border border-brand-darkBorder rounded-xl text-brand-purpleLight shadow-lg flex items-center justify-center hover:bg-brand-darkBg transition-colors mt-2">
+                            <i class="fa-solid fa-location-crosshairs"></i>
+                        </button>
+                    </div>
+
+                    <!-- Map Legend -->
+                    <div class="absolute top-4 left-4 bg-brand-darkPanel/90 backdrop-blur-md border border-brand-darkBorder rounded-xl p-3 shadow-lg z-10">
+                        <h4 class="text-xs font-semibold text-white mb-2 uppercase tracking-wider">Fill Level</h4>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
+                                <span class="text-xs text-gray-300">Full (>80%)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]"></div>
+                                <span class="text-xs text-gray-300">Moderate (40-80%)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                <span class="text-xs text-gray-300">Empty (<40%)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SVG Route Overlay -->
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 5;">
+                        <!-- Route Line -->
+                        <path d="M 200,300 C 250,280 300,350 350,300 S 450,250 500,350 S 600,400 650,300 S 750,200 800,250" 
+                              fill="none" 
+                              stroke="#8b5cf6" 
+                              stroke-width="4" 
+                              class="route-line"
+                              filter="drop-shadow(0 0 4px rgba(139, 92, 246, 0.5))" />
+                        
+                        <!-- Start Point -->
+                        <circle cx="200" cy="300" r="8" fill="#111217" stroke="#8b5cf6" stroke-width="3" />
+                        <!-- End Point -->
+                        <circle cx="800" cy="250" r="8" fill="#8b5cf6" />
+                    </svg>
+
+                    <!-- Container Markers (HTML Overlay) -->
+                    <div class="absolute inset-0 pointer-events-none" style="z-index: 6;">
+                        <!-- Marker 1 (Full) -->
+                        <div class="absolute top-[280px] left-[340px] pointer-events-auto cursor-pointer group">
+                            <div class="w-8 h-8 bg-brand-darkPanel rounded-full flex items-center justify-center border-2 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)] relative">
+                                <i class="fa-solid fa-trash text-red-500 text-xs"></i>
+                                <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-brand-darkPanel border border-brand-darkBorder text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">C-1042: 95%</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Marker 2 (Moderate) -->
+                        <div class="absolute top-[340px] left-[490px] pointer-events-auto cursor-pointer group">
+                            <div class="w-8 h-8 bg-brand-darkPanel rounded-full flex items-center justify-center border-2 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)] relative">
+                                <i class="fa-solid fa-trash text-yellow-500 text-xs"></i>
+                            </div>
+                        </div>
+
+                        <!-- Marker 3 (Full) -->
+                        <div class="absolute top-[390px] left-[590px] pointer-events-auto cursor-pointer group scale-110 z-10">
+                            <div class="w-10 h-10 bg-brand-purple rounded-full flex items-center justify-center border-2 border-white shadow-glow relative">
+                                <i class="fa-solid fa-truck text-white text-sm"></i>
+                                <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-brand-purple rotate-45 -z-10"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route Details Drawer (Bottom) -->
+                <div class="h-64 bg-brand-darkPanel border-t border-brand-darkBorder flex-shrink-0 flex flex-col">
+                    <div class="p-4 border-b border-brand-darkBorder flex justify-between items-center bg-brand-darkBg/50">
+                        <div class="flex items-center gap-4">
+                            <h2 class="text-lg font-bold text-white">Centar District Alpha - Stop Details</h2>
+                            <span class="bg-brand-darkBg border border-brand-darkBorder text-gray-400 text-xs px-2 py-1 rounded-md">24 Stops Total</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="px-4 py-2 bg-brand-darkBg border border-brand-darkBorder rounded-xl text-sm font-medium text-white hover:bg-brand-darkPanel transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-file-export"></i> Export Manifest
+                            </button>
+                            <button class="px-4 py-2 bg-brand-purple hover:bg-brand-purpleLight text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2 shadow-glow">
+                                <i class="fa-solid fa-location-arrow"></i> Send to Driver
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 overflow-x-auto p-4 flex gap-4 hide-scrollbar">
+                        
+                        <!-- Stop Card 1 (Completed) -->
+                        <div class="min-w-[280px] bg-brand-darkBg border border-brand-darkBorder rounded-xl p-4 opacity-60">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center border border-green-500/30">
+                                        <i class="fa-solid fa-check text-[10px]"></i>
+                                    </div>
+                                    <span class="font-semibold text-white text-sm">Stop 1</span>
+                                </div>
+                                <span class="text-xs text-gray-500">08:15 AM</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mb-2 truncate">Blvd. Partizanski Odredi 14</p>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-500">C-1042</span>
+                                <span class="text-green-500">Collected (85%)</span>
+                            </div>
+                        </div>
+
+                        <!-- Stop Card 2 (Next/Active) -->
+                        <div class="min-w-[280px] bg-brand-darkBg border border-brand-purple rounded-xl p-4 shadow-glow relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-brand-purple"></div>
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-brand-purple flex items-center justify-center text-white shadow-md">
+                                        <span class="text-xs font-bold">2</span>
+                                    </div>
+                                    <span class="font-semibold text-white text-sm">Next Stop</span>
+                                </div>
+                                <span class="text-xs text-brand-purpleLight font-medium">ETA: 5 min</span>
+                            </div>
+                            <p class="text-sm text-white mb-2 truncate">Ul. Makedonija 22</p>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-400">C-1088</span>
+                                <span class="text-red-400 font-medium">Critical Fill (95%)</span>
+                            </div>
+                        </div>
+
+                        <!-- Stop Card 3 (Upcoming) -->
+                        <div class="min-w-[280px] bg-brand-darkBg border border-brand-darkBorder rounded-xl p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-brand-darkPanel border border-gray-600 flex items-center justify-center text-gray-400">
+                                        <span class="text-xs font-bold">3</span>
+                                    </div>
+                                    <span class="font-semibold text-gray-300 text-sm">Stop 3</span>
+                                </div>
+                                <span class="text-xs text-gray-500">~08:35 AM</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mb-2 truncate">Kej 13ti Noemvri</p>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-500">C-2011</span>
+                                <span class="text-yellow-500">Moderate (60%)</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Stop Card 4 (Upcoming) -->
+                        <div class="min-w-[280px] bg-brand-darkBg border border-brand-darkBorder rounded-xl p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-brand-darkPanel border border-gray-600 flex items-center justify-center text-gray-400">
+                                        <span class="text-xs font-bold">4</span>
+                                    </div>
+                                    <span class="font-semibold text-gray-300 text-sm">Stop 4</span>
+                                </div>
+                                <span class="text-xs text-gray-500">~08:45 AM</span>
+                            </div>
+                            <p class="text-sm text-gray-400 mb-2 truncate">Ploshtad Makedonija</p>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-500">C-2015</span>
+                                <span class="text-red-500">High (82%)</span>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

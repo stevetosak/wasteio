@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Waste Management Skopje - Welcome</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        },
+                        gray: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            800: '#1f2937',
+                            900: '#111827',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="w-full min-h-screen bg-gray-50 flex items-center justify-center p-4 m-0">
+
+    <!-- Main Container -->
+    <main id="welcome-container" class="w-full max-w-[1440px] min-h-[900px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col lg:flex-row relative">
+        
+        <!-- Left Side: Content & Actions -->
+        <section id="content-section" class="w-full lg:w-5/12 p-8 lg:p-16 flex flex-col justify-center relative z-10 bg-white">
+            
+            <!-- Logo -->
+            <div class="mb-12 flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
+                    <i class="fa-solid fa-leaf text-xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">EcoSkopje</h1>
+            </div>
+
+            <!-- Value Proposition -->
+            <div class="space-y-6 mb-12">
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-sm font-medium">
+                    <span class="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></span>
+                    Smart Waste Management System
+                </span>
+                <h2 class="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
+                    Optimize Routes.<br>
+                    <span class="text-primary-600">Cleaner City.</span>
+                </h2>
+                <p class="text-lg text-gray-600 leading-relaxed max-w-md">
+                    Real-time IoT monitoring for waste containers across Skopje. Track fill levels instantly and generate efficient, eco-friendly pickup routes for your fleet.
+                </p>
+            </div>
+
+            <!-- Feature Highlights (Mini Cards) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
+                <div class="p-4 rounded-2xl border border-gray-100 bg-gray-50/50 flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-primary-600 shrink-0">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 text-sm mb-1">Live Fill Levels</h3>
+                        <p class="text-xs text-gray-500">Monitor empty, moderate, and full containers instantly.</p>
+                    </div>
+                </div>
+                <div class="p-4 rounded-2xl border border-gray-100 bg-gray-50/50 flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-primary-600 shrink-0">
+                        <i class="fa-solid fa-route"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 text-sm mb-1">Smart Routing</h3>
+                        <p class="text-xs text-gray-500">AI-generated paths to minimize fuel and time.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTAs -->
+            <div class="flex flex-col sm:flex-row items-center gap-4 mt-auto">
+                <button class="w-full sm:w-auto px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl shadow-lg shadow-primary-600/20 transition-all duration-200 flex items-center justify-center gap-2 group">
+                    Sign In to Dashboard
+                    <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                </button>
+                <button class="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-regular fa-circle-question"></i>
+                    Learn More
+                </button>
+            </div>
+
+            <!-- Footer Links -->
+            <div class="mt-12 pt-8 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+                <p>&copy; 2024 EcoSkopje</p>
+                <div class="flex gap-4">
+                    <a href="#" class="hover:text-primary-600 transition-colors">Help</a>
+                    <a href="#" class="hover:text-primary-600 transition-colors">Privacy</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Side: Visual Context (Map & UI Preview) -->
+        <section id="visual-section" class="w-full lg:w-7/12 bg-gray-100 relative overflow-hidden hidden lg:block">
+            <!-- Map Background -->
+            <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-40 mix-blend-luminosity"></div>
+            <div class="absolute inset-0 bg-gradient-to-br from-primary-900/10 to-gray-900/40"></div>
+            
+            <!-- Map Overlay UI Elements -->
+            <div class="absolute inset-0 flex items-center justify-center p-12">
+                
+                <!-- Floating Glass Card Preview -->
+                <div class="w-full max-w-lg bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-6 transform rotate-[-2deg] hover:rotate-0 transition-transform duration-500">
+                    
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-semibold text-gray-900">Active Fleet Routing</h3>
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Live</span>
+                    </div>
+
+                    <!-- Mock Route Card -->
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
+                        <div class="flex items-center gap-4 mb-4">
+                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Driver" class="w-12 h-12 rounded-full object-cover">
+                            <div>
+                                <h4 class="font-medium text-gray-900">Truck #42 - Center District</h4>
+                                <p class="text-sm text-gray-500">En route to Container 8A</p>
+                            </div>
+                            <div class="ml-auto text-right">
+                                <div class="text-sm font-semibold text-primary-600">85% Full</div>
+                                <div class="text-xs text-gray-400">Next stop</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-gray-100 rounded-full h-2 mb-2">
+                            <div class="bg-primary-500 h-2 rounded-full" style="width: 65%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Started 06:00 AM</span>
+                            <span>12/18 Collected</span>
+                        </div>
+                    </div>
+
+                    <!-- Map Pins Mockup -->
+                    <div class="h-48 rounded-xl bg-gray-50 border border-gray-100 relative overflow-hidden">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80')] bg-cover bg-center opacity-50"></div>
+                        
+                        <!-- Pins -->
+                        <div class="absolute top-1/4 left-1/4 w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-md animate-bounce"></div>
+                        <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-yellow-400 rounded-full border-2 border-white shadow-md"></div>
+                        <div class="absolute bottom-1/3 right-1/4 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-md"></div>
+                        
+                        <!-- Route Line SVG Mock -->
+                        <svg class="absolute inset-0 w-full h-full" style="stroke: #16a34a; stroke-width: 3; stroke-dasharray: 5,5; fill: none;">
+                            <path d="M 120 60 Q 200 120 280 100 T 350 140" />
+                        </svg>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Decorative Elements -->
+            <div class="absolute top-8 right-8 bg-white/80 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/50 flex items-center gap-2">
+                <i class="fa-solid fa-location-dot text-primary-600"></i>
+                <span class="text-sm font-medium text-gray-800">Skopje Region</span>
+            </div>
+            
+        </section>
+
+    </main>
+
+</body>
+</html>

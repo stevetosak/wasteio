@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Pickup (Turn-by-Turn) - EcoSkopje</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Host Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            black: '#0c0d0d',
+                            green: '#ecf4ee',
+                            gray: '#fafafa',
+                            white: '#ffffff',
+                            accent: '#86efac',
+                            accentDark: '#22c55e',
+                            darkBg: '#111217',
+                            darkPanel: '#1a1d24',
+                            darkBorder: '#2a2e39',
+                            purple: '#6d28d9',
+                            purpleLight: '#8b5cf6'
+                        },
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        gray: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: '#111827',
+                        },
+                        danger: {
+                            50: '#fef2f2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                        },
+                        warning: {
+                            50: '#fffbeb',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'card': '0 2px 10px rgba(0, 0, 0, 0.02)',
+                        'floating': '0 10px 40px -10px rgba(0,0,0,0.1)',
+                        'glow': '0 0 15px rgba(34, 197, 94, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { font-family: 'Host Grotesk', sans-serif; overflow: hidden; background-color: #f9fafb; color: #1f2937; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .map-bg {
+            background-image: url('https://storage.googleapis.com/uxpilot-auth.appspot.com/95f195bcee-b59656394b6c913db66d.png');
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.95) contrast(1.1);
+        }
+        .route-line {
+            stroke-dasharray: 10;
+            animation: dash 20s linear infinite;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            background-color: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="w-full h-screen flex m-0 overflow-hidden text-gray-800 bg-gray-50">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col h-full flex-shrink-0 transition-all duration-300 z-50">
+        <!-- Logo -->
+        <div class="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-gray-200 flex-shrink-0">
+            <a href="#" class="inline-flex items-center gap-3 group">
+                <div class="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center text-white shadow-soft group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-leaf text-xl text-white"></i>
+                </div>
+                <span class="text-xl font-bold text-gray-900 tracking-tight hidden lg:block">EcoSkopje</span>
+            </a>
+        </div>
+
+        <!-- User Profile Mini -->
+        <div class="p-4 border-b border-gray-200 hidden lg:block">
+            <div class="flex items-center gap-3 px-2 py-2 rounded-xl transition-colors bg-gray-50 border border-gray-100">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="User" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm">
+                <div class="overflow-hidden">
+                    <p class="text-sm font-semibold text-gray-900 truncate">Marko K.</p>
+                    <p class="text-xs text-gray-500 truncate">Admin</p>
+                </div>
+                <button class="ml-auto text-gray-400 hover:text-gray-900">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Nav Links -->
+        <nav class="flex-1 overflow-y-auto py-6 px-3 lg:px-4 space-y-2">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3 hidden lg:block">Menu</div>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <span class="hidden lg:block">Map Overview</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl bg-primary-50 text-primary-600 font-medium transition-colors group border border-primary-100 shadow-sm">
+                <div class="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+                <span class="hidden lg:block">Pickup Routes</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+                <span class="hidden lg:block">Containers</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm relative">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </div>
+                <span class="hidden lg:block flex-1">Alerts</span>
+                <span class="hidden lg:flex items-center justify-center bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">2 New</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <span class="hidden lg:block">Reports</span>
+            </a>
+
+            <div class="mt-8 mb-4">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3 hidden lg:block">Support</div>
+                
+                <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                        <i class="fa-solid fa-gear"></i>
+                    </div>
+                    <span class="hidden lg:block">Settings</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 relative h-full flex flex-col bg-gray-50 overflow-hidden">
+        
+        <!-- Header -->
+        <header id="page-header" class="h-20 flex justify-between items-center px-6 bg-white border-b border-gray-200 flex-shrink-0 z-20 shadow-sm relative">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Active Pickup</h1>
+                <p class="text-sm text-gray-500">Centar District Alpha • Route in Progress</p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-xl border border-green-200 text-green-700 font-medium text-sm">
+                    <i class="fa-solid fa-circle-dot text-xs animate-pulse"></i>
+                    <span>Live Tracking</span>
+                </div>
+                <div class="w-px h-8 bg-gray-200 mx-2"></div>
+                <button class="w-10 h-10 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 flex items-center justify-center shadow-sm transition-colors">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Layout -->
+        <div class="flex-1 relative flex flex-col lg:flex-row overflow-hidden">
+            
+            <!-- Left Side: Map Area -->
+            <div class="flex-1 relative map-bg h-full">
+                <!-- Map Controls Overlay -->
+                <div class="absolute top-4 right-4 flex flex-col gap-2 z-10">
+                    <button class="w-12 h-12 bg-white border border-gray-200 rounded-xl text-gray-700 shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors">
+                        <i class="fa-solid fa-plus text-lg"></i>
+                    </button>
+                    <button class="w-12 h-12 bg-white border border-gray-200 rounded-xl text-gray-700 shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors">
+                        <i class="fa-solid fa-minus text-lg"></i>
+                    </button>
+                    <button class="w-12 h-12 bg-white border border-gray-200 rounded-xl text-primary-600 shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors mt-2">
+                        <i class="fa-solid fa-location-arrow text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Turn Instruction Overlay (Top Center/Left) -->
+                <div class="absolute top-6 left-1/2 -translate-x-1/2 lg:translate-x-0 lg:left-6 z-10 w-[90%] lg:w-auto max-w-md">
+                    <div class="bg-gray-900 text-white rounded-2xl p-5 shadow-2xl flex items-center gap-5 border border-gray-700 backdrop-blur-md bg-opacity-95">
+                        <div class="w-14 h-14 bg-gray-800 rounded-xl flex items-center justify-center border border-gray-600">
+                            <i class="fa-solid fa-arrow-turn-right text-3xl text-primary-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-3xl font-bold tracking-tight">150</span>
+                                <span class="text-lg font-medium text-gray-400">m</span>
+                            </div>
+                            <div class="text-base font-medium text-gray-200 mt-1">Turn right onto <span class="text-white font-bold">Blvd. Partizanski Odredi</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route Progress Overlay (Bottom Left) -->
+                <div class="absolute bottom-6 left-6 z-10 hidden lg:block">
+                    <div class="bg-white rounded-2xl p-4 shadow-lg border border-gray-200 flex items-center gap-6">
+                        <div>
+                            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ETA</div>
+                            <div class="text-xl font-bold text-gray-900">10:15 AM</div>
+                        </div>
+                        <div class="w-px h-10 bg-gray-200"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Distance</div>
+                            <div class="text-xl font-bold text-gray-900">1.2 km</div>
+                        </div>
+                        <div class="w-px h-10 bg-gray-200"></div>
+                        <div>
+                            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Time</div>
+                            <div class="text-xl font-bold text-primary-600">4 min</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SVG Route Overlay -->
+                <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 5;">
+                    <!-- Past Route Line (Faded) -->
+                    <path d="M 100,600 C 150,550 200,500 300,550" 
+                          fill="none" 
+                          stroke="#9ca3af" 
+                          stroke-width="6" 
+                          stroke-linecap="round" />
+                          
+                    <!-- Active Route Line -->
+                    <path d="M 300,550 C 400,600 500,450 650,500 S 750,400 850,450" 
+                          fill="none" 
+                          stroke="#22c55e" 
+                          stroke-width="8" 
+                          stroke-linecap="round"
+                          filter="drop-shadow(0 4px 6px rgba(34, 197, 94, 0.4))" />
+                          
+                    <!-- Direction Arrow -->
+                    <polygon points="450,520 440,505 460,505" fill="#ffffff" transform="rotate(30 450 515)" />
+                    <polygon points="600,480 590,465 610,465" fill="#ffffff" transform="rotate(-15 600 475)" />
+                </svg>
+
+                <!-- Container Markers (HTML Overlay) -->
+                <div class="absolute inset-0 pointer-events-none" style="z-index: 6;">
+                    
+                    <!-- Past Waypoint (Completed) -->
+                    <div class="absolute top-[580px] left-[100px] pointer-events-auto cursor-pointer group opacity-60">
+                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center border-2 border-white shadow-md relative">
+                            <i class="fa-solid fa-check text-gray-500 text-xs"></i>
+                        </div>
+                    </div>
+
+                    <!-- Active Waypoint / Vehicle -->
+                    <div class="absolute top-[530px] left-[280px] pointer-events-auto cursor-pointer group scale-125 z-20">
+                        <div class="w-14 h-14 bg-primary-600 rounded-full flex items-center justify-center border-4 border-white shadow-[0_0_20px_rgba(34,197,94,0.5)] relative">
+                            <i class="fa-solid fa-truck text-white text-xl"></i>
+                            <!-- Pulse effect -->
+                            <div class="absolute inset-0 rounded-full border-2 border-primary-500 animate-ping opacity-75"></div>
+                            <!-- Direction indicator -->
+                            <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[12px] border-b-primary-600"></div>
+                        </div>
+                    </div>
+
+                    <!-- Next Waypoint (Target) -->
+                    <div class="absolute top-[430px] left-[830px] pointer-events-auto cursor-pointer group z-10">
+                        <div class="bg-white px-3 py-2 rounded-xl shadow-lg border-2 border-primary-500 flex items-center gap-2 mb-2 absolute bottom-full left-1/2 -translate-x-1/2 whitespace-nowrap">
+                            <i class="fa-solid fa-trash-can text-red-500"></i>
+                            <span class="font-bold text-gray-900">Stop 3</span>
+                        </div>
+                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center border-4 border-primary-500 shadow-xl relative">
+                            <i class="fa-solid fa-bullseye text-primary-600 text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Turn-by-Turn Panel -->
+            <div class="w-full lg:w-[480px] bg-white border-l border-gray-200 flex flex-col h-full flex-shrink-0 z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.05)]">
+                
+                <!-- Progress Header -->
+                <div class="p-6 border-b border-gray-200 bg-gray-50">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Route Progress</div>
+                        <div class="bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded-full">Stop 3 of 18</div>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2 overflow-hidden">
+                        <div class="bg-primary-500 h-full rounded-full transition-all duration-500" style="width: 16%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 font-medium">
+                        <span>2 Completed</span>
+                        <span>16 Remaining</span>
+                    </div>
+                </div>
+
+                <!-- Next Stop Details Card -->
+                <div class="flex-1 overflow-y-auto p-6 bg-white">
+                    
+                    <div class="mb-6">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4">Next Stop Details</h2>
+                        
+                        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                            <!-- Header with ID and Fill -->
+                            <div class="p-5 border-b border-gray-100 flex justify-between items-start bg-gray-50">
+                                <div>
+                                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Container ID</div>
+                                    <div class="text-2xl font-bold text-gray-900">C-1042</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Fill Level</div>
+                                    <div class="inline-flex items-center gap-1.5 bg-red-50 text-red-700 px-2.5 py-1 rounded-lg font-bold border border-red-100">
+                                        <i class="fa-solid fa-triangle-exclamation text-xs"></i> 95%
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Address & Notes -->
+                            <div class="p-5 space-y-4">
+                                <div class="flex gap-4">
+                                    <div class="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 flex-shrink-0 mt-1">
+                                        <i class="fa-solid fa-location-dot"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Address</div>
+                                        <div class="font-semibold text-gray-900 text-base">Blvd. Partizanski Odredi 14</div>
+                                        <div class="text-sm text-gray-600">Centar, Skopje 1000</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex gap-4">
+                                    <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0 mt-1">
+                                        <i class="fa-solid fa-clipboard-list"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500 mb-1">Driver Notes</div>
+                                        <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-800 font-medium">
+                                            Gate code is 4421. Container is located behind the main building near the loading dock.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Issue Reporting -->
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider text-gray-500">Quick Report Issue</h3>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button class="flex flex-col items-center justify-center gap-2 p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all text-center group">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">
+                                    <i class="fa-solid fa-car-side"></i>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-700">Blocked<br>Access</span>
+                            </button>
+                            <button class="flex flex-col items-center justify-center gap-2 p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all text-center group">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-red-100 group-hover:text-red-600 transition-colors">
+                                    <i class="fa-solid fa-dumpster-fire"></i>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-700">Overflow<br>Spill</span>
+                            </button>
+                            <button class="flex flex-col items-center justify-center gap-2 p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all text-center group">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                </div>
+                                <span class="text-xs font-semibold text-gray-700">Damaged<br>Bin</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Primary Actions (Sticky Bottom) -->
+                <div class="p-6 bg-white border-t border-gray-200 shadow-[0_-10px_20px_rgba(0,0,0,0.03)] z-30">
+                    <div class="flex flex-col gap-3">
+                        <button class="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-primary-500/30 text-lg group">
+                            <i class="fa-solid fa-location-dot group-hover:scale-110 transition-transform"></i> Arrived at Stop
+                        </button>
+                        
+                        <button class="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg text-lg opacity-50 cursor-not-allowed">
+                            <i class="fa-solid fa-check-double"></i> Complete Pickup
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+</body>
+</html>
