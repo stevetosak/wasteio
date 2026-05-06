@@ -32,3 +32,14 @@ CREATE INDEX idx_telemetry_container_id ON telemetry(container_id);
 CREATE INDEX idx_telemetry_timestamp ON telemetry(timestamp);
 CREATE INDEX idx_pickups_container_id ON pickups(container_id);
 CREATE INDEX idx_pickups_pickup_time ON pickups(pickup_time);
+
+
+CREATE TABLE container_device
+(
+    id         VARCHAR(255)     NOT NULL,
+    name       VARCHAR(255),
+    longitude  DOUBLE PRECISION NOT NULL,
+    latitude   DOUBLE PRECISION NOT NULL,
+    fill_level DOUBLE PRECISION NOT NULL,
+    CONSTRAINT pk_container_device PRIMARY KEY (id)
+);
