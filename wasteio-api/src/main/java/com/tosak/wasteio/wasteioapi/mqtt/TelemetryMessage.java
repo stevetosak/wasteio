@@ -1,17 +1,15 @@
 package com.tosak.wasteio.wasteioapi.mqtt;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TelemetryMessage {
 
-    @JsonProperty("device_id")
-    private String deviceId;
-
-    @JsonProperty("fill_level")
+    private String containerId;
     private double fillLevel;
-
-    @JsonProperty("timestamp")
+    private double batteryLevel;
     private String timestamp;
+    private Location location;
 }

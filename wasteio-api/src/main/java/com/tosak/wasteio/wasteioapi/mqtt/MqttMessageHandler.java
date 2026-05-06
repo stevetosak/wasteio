@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -16,6 +17,7 @@ public class MqttMessageHandler {
 
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public void handleMessage(Message<String> message) {
+
         try {
             String payload = message.getPayload();
             log.info("Received MQTT message: {}", payload);
@@ -23,29 +25,31 @@ public class MqttMessageHandler {
             TelemetryMessage telemetry =
                     objectMapper.readValue(payload, TelemetryMessage.class);
 
-            repository.findById(telemetry.getDeviceId()).ifPresentOrElse(
+            repository.findById(telemetry.getContainerId()).ifPresentOrElse(
                     device -> {
+
                         double oldLevel = device.getFillLevel();
+
                         device.setFillLevel(telemetry.getFillLevel());
+
                         repository.save(device);
 
                         log.info("Device updated {} - fillLevel: {} -> {}",
-                                telemetry.getDeviceId(),
+                                telemetry.getContainerId(),
                                 oldLevel,
                                 telemetry.getFillLevel());
 
                         if (oldLevel - telemetry.getFillLevel() > 0.8) {
-                            log.info("Container {} is full / emptied threshold reached",
-                                    telemetry.getDeviceId());
+                            log.info("Container {} threshold reached",
+                                    telemetry.getContainerId());
                         }
                     },
                     () -> log.warn("Device not found: {}",
-                            telemetry.getDeviceId())
+                            telemetry.getContainerId())
             );
 
         } catch (Exception e) {
-            log.error("Error while processing MQTT message: {}",
-                    e.getMessage());
+            log.error("Error while processing MQTT message", e);
         }
     }
 }

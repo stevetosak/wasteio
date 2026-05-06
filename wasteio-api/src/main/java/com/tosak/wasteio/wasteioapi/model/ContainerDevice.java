@@ -17,7 +17,6 @@ import java.util.Objects;
 public class ContainerDevice {
     @Id
     private String id;
-
     private String name;
     private double longitude;
     private double latitude;
