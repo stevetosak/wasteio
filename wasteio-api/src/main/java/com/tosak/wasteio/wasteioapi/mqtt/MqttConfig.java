@@ -5,9 +5,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
 import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
 import org.springframework.integration.mqtt.inbound.MqttPahoMessageDrivenChannelAdapter;
+import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
 import org.springframework.integration.mqtt.support.DefaultPahoMessageConverter;
 import org.springframework.messaging.MessageChannel;
 
@@ -54,4 +56,25 @@ public class MqttConfig {
         adapter.setOutputChannel(mqttInputChannel);
         return adapter;
     }
+
+    @Bean
+    public MqttPahoMessageHandler outboundAdapter(MqttPahoClientFactory mqttClientFactory) {
+        MqttPahoMessageHandler handler = new MqttPahoMessageHandler("backend-publisher", mqttClientFactory);
+        handler.setAsync(true);
+        handler.setDefaultTopic("waste/containers/+/commands");
+        return handler;
+    }
+
+    @Bean
+    public MessageChannel mqttOutboundChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public IntegrationFlow outboundFlow(MqttPahoMessageHandler outboundAdapter, MessageChannel mqttOutboundChannel) {
+        return IntegrationFlow.from(mqttOutboundChannel)
+                .handle(outboundAdapter)
+                .get();
+    }
+    
 }

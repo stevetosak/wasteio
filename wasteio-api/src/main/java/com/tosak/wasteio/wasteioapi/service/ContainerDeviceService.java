@@ -2,15 +2,21 @@ package com.tosak.wasteio.wasteioapi.service;
 
 import com.tosak.wasteio.wasteioapi.model.Container;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.stereotype.Service;
 import java.util.List;
-
+@Slf4j
 @Service
 public class ContainerDeviceService {
     private final ContainerRepository repository;
+    private final MessageChannel mqttOutboundChannel;
 
-    public ContainerDeviceService(ContainerRepository repository) {
+    public ContainerDeviceService(ContainerRepository repository, MessageChannel mqttOutboundChannel) {
         this.repository = repository;
+        this.mqttOutboundChannel = mqttOutboundChannel;
     }
 
     public Container addDevice(Container device) {
@@ -43,4 +49,20 @@ public class ContainerDeviceService {
         device.setId(id);
         return repository.save(device);
     }
+
+    public void requestPickup(String containerId) {
+        try {
+            String topic = "waste/containers/" + containerId + "/commands";
+            Message<?> message = MessageBuilder.withPayload("pickup")
+                    .setHeader("mqtt_topic", topic)
+                    .build();
+            mqttOutboundChannel.send(message);
+
+            log.info("Pickup command sent for container: {}", containerId);
+        } catch (Exception e) {
+            log.error("Failed to send pickup command for container: {}", containerId, e);
+            throw new RuntimeException("Failed to send pickup command", e);
+        }
+    }
+    
 }
