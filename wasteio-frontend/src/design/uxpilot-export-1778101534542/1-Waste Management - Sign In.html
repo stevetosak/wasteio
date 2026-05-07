@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - EcoSkopje</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        },
+                        gray: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: '#111827',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="w-full min-h-screen bg-gray-50 flex items-center justify-center p-4 sm:p-6 lg:p-8 m-0">
+
+    <!-- Main Container -->
+    <main id="auth-container" class="w-full max-w-[1440px] min-h-[900px] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col lg:flex-row relative">
+        
+        <!-- Left Side: Login Form -->
+        <section id="login-section" class="w-full lg:w-1/2 p-8 sm:p-12 lg:p-20 flex flex-col justify-between relative z-10 bg-white">
+            
+            <!-- Header/Logo -->
+            <header id="auth-header" class="mb-12">
+                <a href="#" class="inline-flex items-center gap-3 group">
+                    <div class="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-500/30 group-hover:scale-105 transition-transform">
+                        <i class="fa-solid fa-leaf text-xl"></i>
+                    </div>
+                    <span class="text-2xl font-bold text-gray-900 tracking-tight">EcoSkopje</span>
+                </a>
+            </header>
+
+            <!-- Form Container -->
+            <div id="form-container" class="w-full max-w-md mx-auto flex-1 flex flex-col justify-center">
+                
+                <div class="mb-8 text-center sm:text-left">
+                    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 tracking-tight">Welcome back</h1>
+                    <p class="text-gray-500 text-base">Sign in to your account to manage operations.</p>
+                </div>
+
+                <form id="login-form" class="space-y-5">
+                    
+                    <!-- Email/Phone Input -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1.5">Email or Phone</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <i class="fa-regular fa-envelope"></i>
+                            </div>
+                            <input type="text" id="email" name="email" placeholder="worker@ecoskopje.mk" 
+                                class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white">
+                        </div>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                            <input type="password" id="password" name="password" placeholder="••••••••" 
+                                class="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white">
+                            <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
+                                <i class="fa-regular fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Remember Me & Forgot Password -->
+                    <div class="flex items-center justify-between pt-2">
+                        <div class="flex items-center">
+                            <input id="remember-me" name="remember-me" type="checkbox" 
+                                class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer accent-primary-600">
+                            <label for="remember-me" class="ml-2 block text-sm text-gray-600 cursor-pointer">
+                                Remember for 30 days
+                            </label>
+                        </div>
+                        <div class="text-sm">
+                            <a href="#" class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
+                                Forgot password?
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" 
+                        class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors mt-6">
+                        Sign in
+                    </button>
+
+                    <!-- Divider -->
+                    <div class="relative py-4">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-gray-200"></div>
+                        </div>
+                        <div class="relative flex justify-center text-sm">
+                            <span class="px-2 bg-white text-gray-500">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <!-- SSO Buttons -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" class="w-full inline-flex justify-center items-center py-2.5 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
+                            <i class="fa-brands fa-google text-red-500 mr-2"></i>
+                            Google
+                        </button>
+                        <button type="button" class="w-full inline-flex justify-center items-center py-2.5 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
+                            <i class="fa-brands fa-microsoft text-blue-500 mr-2"></i>
+                            Microsoft
+                        </button>
+                    </div>
+                </form>
+
+                <p class="mt-8 text-center text-sm text-gray-600">
+                    Need an account? 
+                    <a href="#" class="font-medium text-primary-600 hover:text-primary-500 transition-colors">Contact admin</a>
+                </p>
+            </div>
+
+            <!-- Footer Links -->
+            <footer id="auth-footer" class="mt-12 pt-8 flex items-center justify-between text-sm text-gray-500">
+                <p>&copy; 2024 EcoSkopje</p>
+                <div class="flex gap-4">
+                    <a href="#" class="hover:text-primary-600 transition-colors">Terms</a>
+                    <a href="#" class="hover:text-primary-600 transition-colors">Privacy</a>
+                </div>
+            </footer>
+        </section>
+
+        <!-- Right Side: Visual/Information Panel (Hidden on mobile) -->
+        <section id="visual-section" class="hidden lg:flex w-1/2 bg-gray-900 relative p-12 flex-col justify-between overflow-hidden rounded-r-[2rem]">
+            
+            <!-- Background Image with Overlay -->
+            <div class="absolute inset-0 z-0">
+                <img class="w-full h-full object-cover opacity-40 mix-blend-luminosity" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/95f195bcee-b59656394b6c913db66d.png" alt="Aerial view of a modern green city with smart infrastructure, focusing on clean streets and smart waste management, eco-friendly lighting, high quality, professional photography" />
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-primary-900/60 mix-blend-multiply"></div>
+            </div>
+
+            <!-- Top Content -->
+            <div class="relative z-10 flex justify-end">
+                <div class="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                    <span class="text-sm font-medium text-white">System Status: Optimal</span>
+                </div>
+            </div>
+
+            <!-- Center Content (Feature Showcase) -->
+            <div class="relative z-10 w-full max-w-lg mx-auto flex-1 flex flex-col justify-center">
+                
+                <!-- Floating Glass Card -->
+                <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl mb-8 transform hover:-translate-y-1 transition-transform duration-300">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-primary-500/20 rounded-xl flex items-center justify-center text-primary-400">
+                            <i class="fa-solid fa-route text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-semibold text-lg">Smart Route Active</h3>
+                            <p class="text-gray-300 text-sm">Zone B - Centar District</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-400">Containers to collect</span>
+                            <span class="text-white font-medium">12 / 45</span>
+                        </div>
+                        <div class="w-full bg-gray-700/50 rounded-full h-2">
+                            <div class="bg-primary-500 h-2 rounded-full" style="width: 25%"></div>
+                        </div>
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-xs text-gray-400">Est. completion: 14:30</span>
+                            <span class="text-xs font-medium text-primary-400 bg-primary-400/10 px-2 py-1 rounded">On Time</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-left">
+                    <h2 class="text-3xl font-bold text-white mb-4">Optimizing Skopje's <br>Waste Management</h2>
+                    <p class="text-gray-300 text-lg leading-relaxed">
+                        Access real-time container fill levels, automated optimal routing, and fleet tracking all from your worker dashboard.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Bottom Content (Testimonial/Stat) -->
+            <div class="relative z-10">
+                <div class="flex items-center gap-4 border-t border-white/10 pt-6">
+                    <div class="flex -space-x-3">
+                        <img class="w-10 h-10 rounded-full border-2 border-gray-900" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Worker">
+                        <img class="w-10 h-10 rounded-full border-2 border-gray-900" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Worker">
+                        <img class="w-10 h-10 rounded-full border-2 border-gray-900" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="Worker">
+                    </div>
+                    <div class="text-sm">
+                        <p class="text-white font-medium">Join 200+ active workers</p>
+                        <p class="text-gray-400">Making the city cleaner daily</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+</body>
+</html>
