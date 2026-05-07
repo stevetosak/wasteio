@@ -1,0 +1,14 @@
+[
+  {
+    "containerId": "container-001",
+    "location": { "lat": 41.9981, "lng": 21.4254 }
+  },
+  {
+    "containerId": "container-002",
+    "location": { "lat": 41.9965, "lng": 21.4301 }
+  },
+  {
+    "containerId": "container-003",
+    "location": { "lat": 42.0012, "lng": 21.4189 }
+  }
+]
