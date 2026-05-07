@@ -10,6 +10,8 @@ import ActivePickupPage from './pages/ActivePickupPage'
 import AlertsPage from './pages/AlertsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
+import HistoryPage from './pages/HistoryPage'
+import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
   return (
@@ -30,9 +32,10 @@ export default function App() {
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/history" element={<HistoryPage />} />
         </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
+        
+        <Route path="*" element={<NotFoundPage />} />      
       </Routes>
     </BrowserRouter>
   )
