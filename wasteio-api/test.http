@@ -62,3 +62,7 @@ DELETE http://localhost:8080/api/devices/container-001
 ###
 
 GET http://localhost:8080/api/devices/container-001
+
+
+###
+POST http://localhost:8080/api/devices/container-001/pickup

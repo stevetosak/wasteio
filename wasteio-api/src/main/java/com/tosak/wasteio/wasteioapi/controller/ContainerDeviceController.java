@@ -43,6 +43,12 @@ public class ContainerDeviceController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/pickup")
+    public ResponseEntity<String> requestPickup(@PathVariable String id) {
+        service.requestPickup(id);
+        return ResponseEntity.ok("Pickup requested for container: " + id);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleException(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
