@@ -4,6 +4,7 @@ import WelcomePage from './pages/WelcomePage'
 import SignInPage from './pages/SignInPage'
 import SelectJurisdictionPage from './pages/SelectJurisdictionPage'
 import MapOverviewPage from './pages/MapOverviewPage'
+import ContainersPage from './pages/ContainersPage'
 import ContainerDetailsPage from './pages/ContainerDetailsPage'
 import PickupRoutesPage from './pages/PickupRoutesPage'
 import ActivePickupPage from './pages/ActivePickupPage'
@@ -23,8 +24,8 @@ export default function App() {
         {/* Dashboard */}
         <Route element={<AppLayout />}>
           <Route path="/map" element={<MapOverviewPage />} />
+          <Route path="/containers" element={<ContainersPage />} />
           <Route path="/containers/:id" element={<ContainerDetailsPage />} />
-          <Route path="/containers" element={<ContainerDetailsPage />} />
           <Route path="/routes" element={<PickupRoutesPage />} />
           <Route path="/routes/active" element={<ActivePickupPage />} />
           <Route path="/alerts" element={<AlertsPage />} />
