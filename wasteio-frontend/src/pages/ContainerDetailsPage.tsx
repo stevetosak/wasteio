@@ -29,7 +29,7 @@ export default function ContainerDetailsPage() {
       {/* Header */}
       <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/map')} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors border border-gray-200">
+          <button onClick={() => navigate('/containers')} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors border border-gray-200">
             <FontAwesomeIcon icon={faArrowLeft} />
           </button>
           <div>
