@@ -13,6 +13,8 @@ import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
 import org.springframework.integration.mqtt.support.DefaultPahoMessageConverter;
 import org.springframework.messaging.MessageChannel;
 
+import java.util.UUID;
+
 @Configuration
 public class MqttConfig {
 
@@ -59,9 +61,10 @@ public class MqttConfig {
 
     @Bean
     public MqttPahoMessageHandler outboundAdapter(MqttPahoClientFactory mqttClientFactory) {
-        MqttPahoMessageHandler handler = new MqttPahoMessageHandler("backend-publisher", mqttClientFactory);
+        String publisherClientId = clientId + "-publisher-" + UUID.randomUUID();
+
+        MqttPahoMessageHandler handler = new MqttPahoMessageHandler(publisherClientId, mqttClientFactory);
         handler.setAsync(true);
-        handler.setDefaultTopic("waste/containers/+/commands");
         return handler;
     }
 
