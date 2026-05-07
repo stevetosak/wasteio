@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerts - EcoSkopje</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Host Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            black: '#0c0d0d',
+                            green: '#ecf4ee',
+                            gray: '#fafafa',
+                            white: '#ffffff',
+                            accent: '#86efac',
+                            accentDark: '#22c55e',
+                            darkBg: '#111217',
+                            darkPanel: '#1a1d24',
+                            darkBorder: '#2a2e39',
+                            purple: '#6d28d9',
+                            purpleLight: '#8b5cf6'
+                        },
+                        primary: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        gray: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: '#111827',
+                        },
+                        danger: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                        },
+                        warning: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                        },
+                        info: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'card': '0 2px 10px rgba(0, 0, 0, 0.02)',
+                        'floating': '0 10px 40px -10px rgba(0,0,0,0.1)',
+                        'glow': '0 0 15px rgba(34, 197, 94, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { font-family: 'Host Grotesk', sans-serif; overflow: hidden; background-color: #f9fafb; color: #1f2937; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Custom Checkbox */
+        .custom-checkbox input:checked + div {
+            background-color: #22c55e;
+            border-color: #22c55e;
+        }
+        .custom-checkbox input:checked + div svg {
+            display: block;
+        }
+    </style>
+</head>
+<body class="w-full h-screen flex m-0 overflow-hidden text-gray-800 bg-gray-50">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col h-full flex-shrink-0 transition-all duration-300 z-50 shadow-sm">
+        <!-- Logo -->
+        <div class="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-gray-200 flex-shrink-0">
+            <a href="#" class="inline-flex items-center gap-3 group">
+                <div class="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center text-white shadow-soft group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-leaf text-xl text-white"></i>
+                </div>
+                <span class="text-xl font-bold text-gray-900 tracking-tight hidden lg:block">EcoSkopje</span>
+            </a>
+        </div>
+
+        <!-- User Profile Mini -->
+        <div class="p-4 border-b border-gray-200 hidden lg:block">
+            <div class="flex items-center gap-3 px-2 py-2 rounded-xl transition-colors bg-gray-50 border border-gray-100 cursor-pointer hover:bg-gray-100">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="User" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm">
+                <div class="overflow-hidden flex-1">
+                    <p class="text-sm font-semibold text-gray-900 truncate">Marko K.</p>
+                    <p class="text-xs text-gray-500 truncate">Admin</p>
+                </div>
+                <button class="text-gray-400 hover:text-gray-900">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Nav Links -->
+        <nav class="flex-1 overflow-y-auto py-6 px-3 lg:px-4 space-y-2">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3 hidden lg:block">Menu</div>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <span class="hidden lg:block">Map Overview</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+                <span class="hidden lg:block">Pickup Routes</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+                <span class="hidden lg:block">Containers</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl bg-primary-50 text-primary-600 font-medium transition-colors group border border-primary-100 shadow-sm">
+                <div class="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-white shadow-md relative">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                </div>
+                <span class="hidden lg:block flex-1">Alerts</span>
+                <span class="hidden lg:flex items-center justify-center bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">12 Active</span>
+            </a>
+            
+            <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <span class="hidden lg:block">Reports</span>
+            </a>
+
+            <div class="mt-8 mb-4">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3 hidden lg:block">Support</div>
+                
+                <a href="#" class="flex items-center gap-3 px-3 py-3 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium transition-colors group">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center group-hover:bg-white transition-all shadow-sm">
+                        <i class="fa-solid fa-gear"></i>
+                    </div>
+                    <span class="hidden lg:block">Settings</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 relative h-full flex flex-col bg-gray-50 overflow-hidden">
+        
+        <!-- Header -->
+        <header id="page-header" class="h-20 flex justify-between items-center px-6 lg:px-8 bg-white border-b border-gray-200 flex-shrink-0 z-20 shadow-sm">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Alerts Center</h1>
+                <p class="text-sm text-gray-500">Monitor and manage system notifications</p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Search -->
+                <div class="hidden md:flex relative w-64">
+                    <input type="text" placeholder="Search alerts..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all text-sm">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+                
+                <div class="w-px h-8 bg-gray-200 mx-2 hidden md:block"></div>
+                
+                <button class="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl font-medium text-sm transition-colors shadow-sm">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="hidden sm:inline">Export</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrollable Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
+            <div class="max-w-7xl mx-auto space-y-6">
+                
+                <!-- Summary Cards Section -->
+                <section id="alerts-summary-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                    <!-- Critical Alerts Card -->
+                    <div class="bg-white rounded-2xl p-5 border border-red-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Critical</p>
+                                <h3 class="text-3xl font-bold text-gray-900">4</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-red-600">
+                                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                            </div>
+                        </div>
+                        <p class="text-sm text-red-600 font-medium flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-trend-up text-xs"></i> +2 from yesterday
+                        </p>
+                    </div>
+
+                    <!-- Warning Alerts Card -->
+                    <div class="bg-white rounded-2xl p-5 border border-amber-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Warnings</p>
+                                <h3 class="text-3xl font-bold text-gray-900">8</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+                                <i class="fa-solid fa-circle-exclamation text-xl"></i>
+                            </div>
+                        </div>
+                        <p class="text-sm text-amber-600 font-medium flex items-center gap-1">
+                            <i class="fa-solid fa-minus text-xs"></i> Unchanged
+                        </p>
+                    </div>
+
+                    <!-- Sensor Offline Card -->
+                    <div class="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-gray-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Offline Sensors</p>
+                                <h3 class="text-3xl font-bold text-gray-900">3</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600">
+                                <i class="fa-solid fa-wifi text-xl"></i>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500 font-medium flex items-center gap-1">
+                            Requires maintenance
+                        </p>
+                    </div>
+
+                    <!-- Resolved Today Card -->
+                    <div class="bg-white rounded-2xl p-5 border border-green-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Resolved Today</p>
+                                <h3 class="text-3xl font-bold text-gray-900">15</h3>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-green-600">
+                                <i class="fa-solid fa-check-double text-xl"></i>
+                            </div>
+                        </div>
+                        <p class="text-sm text-green-600 font-medium flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-trend-up text-xs"></i> Great progress
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Alerts Main Section -->
+                <section id="alerts-main" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+                    
+                    <!-- Filter Bar -->
+                    <div id="alerts-filter-bar" class="p-4 lg:p-5 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <span class="text-sm font-semibold text-gray-500 mr-2">Filter by:</span>
+                            <button class="px-3 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg shadow-sm">All Active</button>
+                            <button class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded-lg transition-colors">Critical</button>
+                            <button class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded-lg transition-colors">Overflow</button>
+                            <button class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded-lg transition-colors">Reports</button>
+                            
+                            <div class="h-6 w-px bg-gray-300 mx-1 hidden md:block"></div>
+                            
+                            <select class="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-lg outline-none focus:ring-2 focus:ring-primary-500">
+                                <option>District: All</option>
+                                <option>Centar</option>
+                                <option>Karposh</option>
+                                <option>Aerodrom</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-semibold rounded-xl transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fa-solid fa-check-double"></i> Acknowledge Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Alerts List Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-white border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th class="p-4 w-12">
+                                        <label class="custom-checkbox flex items-center cursor-pointer">
+                                            <input type="checkbox" class="hidden">
+                                            <div class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center transition-colors">
+                                                <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                            </div>
+                                        </label>
+                                    </th>
+                                    <th class="p-4">Alert Details</th>
+                                    <th class="p-4">Location</th>
+                                    <th class="p-4">Time / Duration</th>
+                                    <th class="p-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                
+                                <!-- Alert Row 1 (Critical Overflow) -->
+                                <tr class="hover:bg-gray-50 transition-colors bg-red-50/30">
+                                    <td class="p-4">
+                                        <label class="custom-checkbox flex items-center cursor-pointer">
+                                            <input type="checkbox" class="hidden">
+                                            <div class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center transition-colors">
+                                                <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                            </div>
+                                        </label>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0 mt-0.5">
+                                                <i class="fa-solid fa-dumpster-fire"></i>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="font-bold text-gray-900">Severe Overflow</span>
+                                                    <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Critical</span>
+                                                </div>
+                                                <p class="text-sm text-gray-500">Container C-1042 is at 100% capacity with reported spillage.</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">Blvd. Partizanski Odredi 14</div>
+                                        <div class="text-xs text-gray-500">Centar District</div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">10:15 AM</div>
+                                        <div class="text-xs text-red-600 font-medium">2h 45m ago</div>
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip" title="View Container">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                            <button class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip" title="Add to Route">
+                                                <i class="fa-solid fa-route"></i>
+                                            </button>
+                                            <button class="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors shadow-sm">
+                                                Acknowledge
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Alert Row 2 (Blocked Access) -->
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="p-4">
+                                        <label class="custom-checkbox flex items-center cursor-pointer">
+                                            <input type="checkbox" class="hidden">
+                                            <div class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center transition-colors">
+                                                <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                            </div>
+                                        </label>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0 mt-0.5">
+                                                <i class="fa-solid fa-car-side"></i>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="font-bold text-gray-900">Blocked Access</span>
+                                                    <span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Warning</span>
+                                                    <span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100"><i class="fa-solid fa-user-shield mr-1"></i>Crew Report</span>
+                                                </div>
+                                                <p class="text-sm text-gray-500">Driver reported vehicle blocking container C-0892.</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">ul. Rooseveltova 33</div>
+                                        <div class="text-xs text-gray-500">Karposh District</div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">09:30 AM</div>
+                                        <div class="text-xs text-amber-600 font-medium">3h 30m ago</div>
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip" title="View Details">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                            <button class="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors shadow-sm">
+                                                Acknowledge
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Alert Row 3 (Sensor Offline) -->
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="p-4">
+                                        <label class="custom-checkbox flex items-center cursor-pointer">
+                                            <input type="checkbox" class="hidden">
+                                            <div class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center transition-colors">
+                                                <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                            </div>
+                                        </label>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 flex-shrink-0 mt-0.5">
+                                                <i class="fa-solid fa-wifi"></i>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="font-bold text-gray-900">Sensor Offline</span>
+                                                    <span class="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">System</span>
+                                                </div>
+                                                <p class="text-sm text-gray-500">No data received from container C-2105 for 12 hours.</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">Blvd. Jane Sandanski 88</div>
+                                        <div class="text-xs text-gray-500">Aerodrom District</div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">Yesterday, 23:00</div>
+                                        <div class="text-xs text-gray-500 font-medium">14h ago</div>
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip" title="View Container">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                            <button class="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors shadow-sm">
+                                                Create Ticket
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                 <!-- Alert Row 4 (Citizen Report) -->
+                                 <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="p-4">
+                                        <label class="custom-checkbox flex items-center cursor-pointer">
+                                            <input type="checkbox" class="hidden">
+                                            <div class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center transition-colors">
+                                                <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                            </div>
+                                        </label>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-info-100 flex items-center justify-center text-info-600 flex-shrink-0 mt-0.5">
+                                                <i class="fa-solid fa-users"></i>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="font-bold text-gray-900">Damaged Bin</span>
+                                                    <span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Warning</span>
+                                                    <span class="bg-info-50 text-info-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-info-100"><i class="fa-solid fa-mobile-screen mr-1"></i>Citizen App</span>
+                                                </div>
+                                                <p class="text-sm text-gray-500">Lid is broken and won't close properly on container C-0422.</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">ul. Makedonija 12</div>
+                                        <div class="text-xs text-gray-500">Centar District</div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">08:15 AM</div>
+                                        <div class="text-xs text-gray-500 font-medium">4h 45m ago</div>
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip" title="View Photo">
+                                                <i class="fa-solid fa-image"></i>
+                                            </button>
+                                            <button class="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors shadow-sm">
+                                                Acknowledge
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Alert Row 5 (Missed Pickup) -->
+                                <tr class="hover:bg-gray-50 transition-colors bg-red-50/30">
+                                    <td class="p-4">
+                                        <label class="custom-checkbox flex items-center cursor-pointer">
+                                            <input type="checkbox" class="hidden">
+                                            <div class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center transition-colors">
+                                                <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                            </div>
+                                        </label>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0 mt-0.5">
+                                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                            </div>
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="font-bold text-gray-900">Missed Pickup</span>
+                                                    <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Critical</span>
+                                                </div>
+                                                <p class="text-sm text-gray-500">Container C-1102 was skipped on scheduled route Alpha-3.</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">ul. Orce Nikolov 55</div>
+                                        <div class="text-xs text-gray-500">Centar District</div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-sm font-medium text-gray-900">Yesterday, 14:30</div>
+                                        <div class="text-xs text-red-600 font-medium">22h ago</div>
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors tooltip" title="View Route">
+                                                <i class="fa-solid fa-route"></i>
+                                            </button>
+                                            <button class="px-3 py-1.5 bg-primary-50 text-primary-700 border border-primary-200 hover:bg-primary-100 text-sm font-medium rounded-lg transition-colors shadow-sm">
+                                                Reschedule
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="p-4 border-t border-gray-200 bg-white flex items-center justify-between">
+                        <span class="text-sm text-gray-500">Showing 1 to 5 of 12 entries</span>
+                        <div class="flex items-center gap-1">
+                            <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 disabled:opacity-50"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary-50 text-primary-600 font-medium text-sm border border-primary-100">1</button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-600 font-medium text-sm border border-transparent">2</button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-600 font-medium text-sm border border-transparent">3</button>
+                            <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>
