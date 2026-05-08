@@ -9,9 +9,20 @@ import { faGoogle, faMicrosoft } from '@fortawesome/free-brands-svg-icons'
 export default function SignInPage() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [errors, setErrors] = useState<{email?: string, password?: string}>({})
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const newErrors: {email?: string, password?: string} = {}
+    if (!email) newErrors.email = 'Email or phone is required'
+    if (!password) newErrors.password = 'Password is required'
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
     navigate('/jurisdiction')
   }
 
@@ -44,9 +55,11 @@ export default function SignInPage() {
                   </div>
                   <input
                     type="text" id="email" placeholder="worker@ecoskopje.mk"
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white"
+                    value={email} onChange={e => setEmail(e.target.value)}
+                    className={`block w-full pl-10 pr-3 py-3 border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white ${errors.email ? 'border-red-400' : 'border-gray-200'}`}
                   />
                 </div>
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
 
               <div>
@@ -57,12 +70,14 @@ export default function SignInPage() {
                   </div>
                   <input
                     type={showPassword ? 'text' : 'password'} id="password" placeholder="••••••••"
-                    className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white"
+                    value={password} onChange={e => setPassword(e.target.value)}
+                    className={`block w-full pl-10 pr-10 py-3 border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white ${errors.password ? 'border-red-400' : 'border-gray-200'}`}
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
                     <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} />
                   </button>
                 </div>
+                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
               </div>
 
               <div className="flex items-center justify-between pt-2">

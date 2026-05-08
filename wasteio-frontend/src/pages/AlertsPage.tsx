@@ -82,9 +82,29 @@ const alerts = [
 
 export default function AlertsPage() {
   const [activeFilter, setActiveFilter] = useState('All Active')
+  const [confirmModal, setConfirmModal] = useState<{show: boolean, alertId: number | null, title: string}>({show: false, alertId: null, title: ''})
 
   return (
     <div className="flex-1 h-full flex flex-col overflow-hidden">
+      {confirmModal.show && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-200 w-full max-w-sm mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Acknowledge Alert</h3>
+            <p className="text-sm text-gray-500 mb-6">Are you sure you want to acknowledge <span className="font-medium text-gray-700">"{confirmModal.title}"</span>?</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmModal({show: false, alertId: null, title: ''})}
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={() => setConfirmModal({show: false, alertId: null, title: ''})}
+                className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors">
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="h-20 flex justify-between items-center px-6 lg:px-8 bg-white border-b border-gray-200 flex-shrink-0 z-20 shadow-sm">
         <div>
@@ -198,7 +218,11 @@ export default function AlertsPage() {
                                 <FontAwesomeIcon icon={action.icon} />
                               </button>
                             ) : (
-                              <button key={i} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors shadow-sm ${
+                              <button key={i} onClick={() => {
+                                if (action.label === 'Acknowledge') {
+                                  setConfirmModal({show: true, alertId: alert.id, title: alert.title})
+                                }
+                              }} className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors shadow-sm ${
                                 action.style ?? 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700'
                               }`}>
                                 {action.label}

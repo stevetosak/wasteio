@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
 import WelcomePage from './pages/WelcomePage'
 import SignInPage from './pages/SignInPage'
@@ -10,8 +10,8 @@ import ActivePickupPage from './pages/ActivePickupPage'
 import AlertsPage from './pages/AlertsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
-import HistoryPage from './pages/HistoryPage'
 import NotFoundPage from './pages/NotFoundPage'
+import LearnMorePage from './pages/LearnMorePage'
 
 export default function App() {
   return (
@@ -21,7 +21,8 @@ export default function App() {
         <Route path="/" element={<WelcomePage />} />
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/jurisdiction" element={<SelectJurisdictionPage />} />
-
+        <Route path="/learn-more" element={<LearnMorePage />} />
+        
         {/* Dashboard */}
         <Route element={<AppLayout />}>
           <Route path="/map" element={<MapOverviewPage />} />
@@ -32,9 +33,8 @@ export default function App() {
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/history" element={<HistoryPage />} />
         </Route>
-        
+
         <Route path="*" element={<NotFoundPage />} />      
       </Routes>
     </BrowserRouter>
