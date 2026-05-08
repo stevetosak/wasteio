@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -39,6 +40,9 @@ public class ContainerDeviceService {
     }
 
     public ContainerDTO addDevice(ContainerDTO dto) {
+        if (dto.getId() == null || dto.getId().isBlank()) {
+            dto.setId(UUID.randomUUID().toString());
+        }
         if (repository.existsById(dto.getId())) {
             throw new RuntimeException("Device with id " + dto.getId() + " already exists");
         }

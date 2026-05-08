@@ -24,11 +24,7 @@ public class AdminController {
 
     @PostMapping("/generate-token")
     @PreAuthorize("hasRole('ADMIN')")
-    public String generateToken() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
+    public String generateToken(Authentication authentication) {
         String email = authentication.getName();
         return authService.generateToken(email);
     }

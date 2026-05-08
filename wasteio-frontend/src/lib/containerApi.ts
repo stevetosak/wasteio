@@ -1,4 +1,5 @@
 import type {Container, ContainerFormData, ContainerStatus, WasteType} from '../types/container'
+import { getStoredToken } from './authApi'
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api'
 
@@ -65,8 +66,12 @@ function toApi(data: ContainerFormData) {
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getStoredToken()
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...init,
   })
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`)

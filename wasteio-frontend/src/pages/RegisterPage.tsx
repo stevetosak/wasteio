@@ -2,19 +2,21 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faLeaf, faEnvelope, faLock, faEyeSlash, faEye, faRoute,
+  faLeaf, faEnvelope, faLock, faEyeSlash, faEye, faUser, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
-import { faGoogle, faMicrosoft } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../context/AuthContext'
 
-export default function SignInPage() {
+export default function RegisterPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { login } = useAuth()
-  const justRegistered = searchParams.get('registered') === '1'
-  const [showPassword, setShowPassword] = useState(false)
+  const { register } = useAuth()
+
+  const token = searchParams.get('token') ?? ''
+
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -23,19 +25,41 @@ export default function SignInPage() {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
-      navigate('/map')
-    } catch {
-      setError('Invalid email or password.')
+      await register(token, name, email, password)
+      navigate('/signin?registered=1')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed. The token may be invalid or already used.')
     } finally {
       setLoading(false)
     }
   }
 
+  if (!token) {
+    return (
+      <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-10 max-w-md w-full text-center">
+          <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FontAwesomeIcon icon={faTriangleExclamation} className="text-2xl text-red-500" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Invalid invitation link</h1>
+          <p className="text-gray-500 text-sm mb-6">
+            This link is missing a registration token. Ask your admin for a valid invitation link.
+          </p>
+          <button
+            onClick={() => navigate('/signin')}
+            className="text-sm font-medium text-green-600 hover:text-green-500 transition-colors"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <main className="w-full max-w-[1440px] min-h-[900px] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col lg:flex-row">
-        {/* Left: Login Form */}
+        {/* Left: Register Form */}
         <section className="w-full lg:w-1/2 p-8 sm:p-12 lg:p-20 flex flex-col justify-between relative z-10 bg-white">
           <header className="mb-12">
             <button onClick={() => navigate('/')} className="inline-flex items-center gap-3 group">
@@ -48,21 +72,31 @@ export default function SignInPage() {
 
           <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center">
             <div className="mb-8 text-center sm:text-left">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 tracking-tight">Welcome back</h1>
-              <p className="text-gray-500 text-base">Sign in to your account to manage operations.</p>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 tracking-tight">Create your account</h1>
+              <p className="text-gray-500 text-base">You've been invited to join EcoSkopje.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {justRegistered && (
-                <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-                  Account created. Sign in to continue.
-                </div>
-              )}
               {error && (
                 <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
                   {error}
                 </div>
               )}
+
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">Full name</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <FontAwesomeIcon icon={faUser} />
+                  </div>
+                  <input
+                    type="text" id="name" placeholder="Marko Kovač"
+                    value={name} onChange={e => setName(e.target.value)}
+                    required
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white"
+                  />
+                </div>
+              </div>
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
@@ -88,7 +122,7 @@ export default function SignInPage() {
                   <input
                     type={showPassword ? 'text' : 'password'} id="password" placeholder="••••••••"
                     value={password} onChange={e => setPassword(e.target.value)}
-                    required
+                    required minLength={6}
                     className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
@@ -97,46 +131,23 @@ export default function SignInPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center">
-                  <input id="remember" type="checkbox" className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded cursor-pointer accent-green-600" />
-                  <label htmlFor="remember" className="ml-2 block text-sm text-gray-600 cursor-pointer">Remember for 30 days</label>
-                </div>
-                <a href="#" className="text-sm font-medium text-green-600 hover:text-green-500 transition-colors">Forgot password?</a>
-              </div>
-
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-sm text-sm font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? 'Signing in…' : 'Sign in'}
+                {loading ? 'Creating account…' : 'Create account'}
               </button>
-
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" className="w-full inline-flex justify-center items-center py-2.5 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <FontAwesomeIcon icon={faGoogle} className="text-red-500 mr-2" />
-                  Google
-                </button>
-                <button type="button" className="w-full inline-flex justify-center items-center py-2.5 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <FontAwesomeIcon icon={faMicrosoft} className="text-blue-500 mr-2" />
-                  Microsoft
-                </button>
-              </div>
             </form>
 
             <p className="mt-8 text-center text-sm text-gray-600">
-              Need an account?{' '}
-              <a href="#" className="font-medium text-green-600 hover:text-green-500 transition-colors">Contact admin</a>
+              Already have an account?{' '}
+              <button
+                onClick={() => navigate('/signin')}
+                className="font-medium text-green-600 hover:text-green-500 transition-colors"
+              >
+                Sign in
+              </button>
             </p>
           </div>
 
@@ -160,36 +171,25 @@ export default function SignInPage() {
             </div>
           </div>
 
-          <div className="relative z-10 w-full max-w-lg mx-auto flex-1 flex flex-col justify-center">
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl mb-8 hover:-translate-y-1 transition-transform duration-300">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center text-green-400">
-                  <FontAwesomeIcon icon={faRoute} className="text-xl" />
-                </div>
+          <div className="relative z-10 w-full max-w-lg mx-auto flex-1 flex flex-col justify-center gap-4">
+            {[
+              { label: 'Real-time container monitoring', sub: 'Live fill levels across all zones' },
+              { label: 'Optimized pickup routing', sub: 'AI-driven route efficiency' },
+              { label: 'Fleet & driver coordination', sub: 'Unified operations dashboard' },
+            ].map(({ label, sub }) => (
+              <div key={label} className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-5 shadow-xl hover:-translate-y-0.5 transition-transform duration-300 flex items-center gap-4">
+                <div className="w-3 h-3 rounded-full bg-green-400 shrink-0" />
                 <div>
-                  <h3 className="text-white font-semibold text-lg">Smart Route Active</h3>
-                  <p className="text-gray-300 text-sm">Zone B - Centar District</p>
+                  <p className="text-white font-semibold">{label}</p>
+                  <p className="text-gray-400 text-sm">{sub}</p>
                 </div>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Containers to collect</span>
-                  <span className="text-white font-medium">12 / 45</span>
-                </div>
-                <div className="w-full bg-gray-700/50 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '25%' }} />
-                </div>
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-xs text-gray-400">Est. completion: 14:30</span>
-                  <span className="text-xs font-medium text-green-400 bg-green-400/10 px-2 py-1 rounded">On Time</span>
-                </div>
-              </div>
-            </div>
+            ))}
 
-            <div className="text-left">
-              <h2 className="text-3xl font-bold text-white mb-4">Optimizing Skopje's<br />Waste Management</h2>
-              <p className="text-gray-300 text-lg leading-relaxed">
-                Access real-time container fill levels, automated optimal routing, and fleet tracking all from your worker dashboard.
+            <div className="mt-4 text-left">
+              <h2 className="text-3xl font-bold text-white mb-3">Join the team keeping<br />Skopje clean</h2>
+              <p className="text-gray-300 leading-relaxed">
+                Your account gives you access to live container data, route assignments, and city-wide waste operations.
               </p>
             </div>
           </div>
