@@ -3,14 +3,14 @@ export type ContainerStatus = 'active' | 'maintenance' | 'offline'
 
 export interface Container {
   id: string
-  name: string
-  address: string
-  wasteType: WasteType
-  capacityLiters: number
+  name?: string
+  address?: string
+  wasteType?: WasteType
+  capacityLiters?: number
   fillLevel: number
   batteryLevel: number
   status: ContainerStatus
-  lastPickup: string
+  lastPickup?: string
   location: { lat: number; lng: number }
 }
 

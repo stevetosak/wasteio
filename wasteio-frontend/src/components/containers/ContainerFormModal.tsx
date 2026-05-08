@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
 import type { Container, ContainerFormData, WasteType, ContainerStatus } from '../../types/container'
@@ -20,23 +20,12 @@ const EMPTY_FORM: ContainerFormData = {
 }
 
 export default function ContainerFormModal({ container, onClose, onSubmit, loading }: Props) {
-  const [form, setForm] = useState<ContainerFormData>(EMPTY_FORM)
+  const [form, setForm] = useState<ContainerFormData>(() =>
+    container
+      ? { name: container.name, address: container.address, wasteType: container.wasteType, capacityLiters: container.capacityLiters, status: container.status, location: container.location }
+      : EMPTY_FORM
+  )
   const isEdit = !!container
-
-  useEffect(() => {
-    if (container) {
-      setForm({
-        name: container.name,
-        address: container.address,
-        wasteType: container.wasteType,
-        capacityLiters: container.capacityLiters,
-        status: container.status,
-        location: container.location,
-      })
-    } else {
-      setForm(EMPTY_FORM)
-    }
-  }, [container])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

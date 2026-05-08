@@ -1,28 +1,82 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowLeft, faMagnifyingGlass, faArrowUpRightFromSquare, faPlus,
+  faArrowLeft, faArrowUpRightFromSquare, faPlus,
   faLocationDot, faExpand, faLocationArrow, faArrowTrendUp,
-  faBatteryThreeQuarters, faRoute, faFlag, faTriangleExclamation, faCamera,
-  faCircleDot,
+  faBatteryThreeQuarters, faRoute, faFlag, faTriangleExclamation,
+  faCircleDot, faSpinner,
 } from '@fortawesome/free-solid-svg-icons'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import MapPlaceholder from '../components/ui/MapPlaceholder'
+import { useContainerDetails } from '../hooks/useContainerDetails'
+import type { FillSnapshot } from '../lib/containerApi'
 
-const fillHistory = [
-  { day: 'Mon', fill: 20 },
-  { day: 'Tue', fill: 45 },
-  { day: 'Wed', fill: 80 },
-  { day: 'Thu', fill: 15 },
-  { day: 'Fri', fill: 40 },
-  { day: 'Sat', fill: 65 },
-  { day: 'Sun', fill: 75 },
-]
+const WASTE_TYPE_COLORS: Record<string, string> = {
+  general: 'bg-gray-500',
+  recycling: 'bg-blue-500',
+  organic: 'bg-green-500',
+  hazardous: 'bg-red-500',
+}
+
+const WASTE_TYPE_LABELS: Record<string, string> = {
+  general: 'General',
+  recycling: 'Recycling',
+  organic: 'Organic',
+  hazardous: 'Hazardous',
+}
+
+function fillColor(level: number) {
+  if (level >= 80) return 'bg-red-500'
+  if (level >= 50) return 'bg-yellow-500'
+  return 'bg-green-500'
+}
+
+function formatLabel(dateStr: string, days: number): string {
+  // Append T00:00:00 to avoid UTC/local shift when parsing date-only strings
+  const d = new Date(`${dateStr}T00:00:00`)
+  if (days <= 7) return d.toLocaleDateString('en-US', { weekday: 'short' })
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function formatLastPickup(raw: string | null | undefined): string {
+  if (!raw) return 'No pickups yet'
+  const d = new Date(raw)
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function chartData(snapshots: FillSnapshot[], days: number) {
+  return snapshots.map(s => ({ day: formatLabel(s.date, days), fill: Math.round(s.fillLevel) }))
+}
 
 export default function ContainerDetailsPage() {
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const { container, fillHistory, days, setDays, loading, error } = useContainerDetails(id ?? '')
+
+  if (loading) {
+    return (
+      <div className="flex-1 h-full flex items-center justify-center bg-gray-100">
+        <FontAwesomeIcon icon={faSpinner} className="text-3xl text-gray-400 animate-spin" />
+      </div>
+    )
+  }
+
+  if (error || !container) {
+    return (
+      <div className="flex-1 h-full flex flex-col items-center justify-center bg-gray-100 gap-4">
+        <p className="text-gray-500">{error || 'Container not found'}</p>
+        <button onClick={() => navigate('/containers')} className="text-sm text-green-600 hover:text-green-500">
+          Back to containers
+        </button>
+      </div>
+    )
+  }
+
+  const fillLevel = Math.round(container.fillLevel ?? 0)
+  const wasteType = container.wasteType ?? 'general'
+  const dotColor = WASTE_TYPE_COLORS[wasteType] ?? 'bg-gray-400'
 
   return (
     <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
@@ -33,17 +87,14 @@ export default function ContainerDetailsPage() {
             <FontAwesomeIcon icon={faArrowLeft} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Container C-1042</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{container.name}</h1>
             <p className="text-sm text-gray-500 flex items-center gap-2">
-              <FontAwesomeIcon icon={faLocationDot} className="text-gray-400" /> Blvd. Partizanski Odredi 14, Centar
+              <FontAwesomeIcon icon={faLocationDot} className="text-gray-400" />
+              {container.address || 'No address'}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative bg-gray-50 rounded-xl flex items-center p-2 border border-gray-200 w-64 hidden md:flex">
-            <div className="pl-2 text-gray-400"><FontAwesomeIcon icon={faMagnifyingGlass} /></div>
-            <input type="text" placeholder="Search container..." className="w-full bg-transparent border-none focus:outline-none focus:ring-0 px-3 py-1 text-sm text-gray-900 placeholder-gray-400" />
-          </div>
           <button className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-900 hover:bg-gray-50 transition-all flex items-center gap-2">
             <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> Export
           </button>
@@ -64,13 +115,16 @@ export default function ContainerDetailsPage() {
               <div className="relative z-10 flex justify-between items-start">
                 <div>
                   <h2 className="text-lg font-medium text-gray-300 mb-1">Current Status</h2>
-                  <div className="text-5xl font-bold text-white mb-2">75% <span className="text-xl text-gray-400 font-medium">Full</span></div>
+                  <div className="text-5xl font-bold text-white mb-2">
+                    {fillLevel}% <span className="text-xl text-gray-400 font-medium">Full</span>
+                  </div>
                   <div className="flex items-center gap-2 text-sm text-green-400">
-                    <FontAwesomeIcon icon={faArrowTrendUp} /> +12% since yesterday
+                    <FontAwesomeIcon icon={faArrowTrendUp} /> Live telemetry
                   </div>
                 </div>
                 <span className="bg-gray-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-gray-700 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faCircleDot} className="text-blue-400" /> Recycling
+                  <FontAwesomeIcon icon={faCircleDot} className="text-blue-400" />
+                  {WASTE_TYPE_LABELS[wasteType] ?? wasteType}
                 </span>
               </div>
               <div className="relative z-10 mt-8">
@@ -78,13 +132,10 @@ export default function ContainerDetailsPage() {
                   <span>Empty</span><span>Full</span>
                 </div>
                 <div className="h-4 w-full bg-gray-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-yellow-500 rounded-full w-[75%] relative">
+                  <div className={`h-full rounded-full relative ${fillColor(fillLevel)}`} style={{ width: `${fillLevel}%` }}>
                     <div className="absolute inset-0 bg-white/20 w-full animate-pulse" />
                   </div>
                 </div>
-                <p className="text-sm text-gray-400 mt-4 flex items-center gap-2">
-                  Predicted full in: <strong className="text-white">4 hours</strong>
-                </p>
               </div>
             </div>
 
@@ -117,29 +168,40 @@ export default function ContainerDetailsPage() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-lg font-medium text-gray-900">Fill Level History</h2>
-                <p className="text-sm text-gray-500">Past 7 days volume trends</p>
+                <p className="text-sm text-gray-500">Daily snapshot at 10 PM</p>
               </div>
-              <select className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-gray-900 focus:border-gray-900 block p-2">
-                <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
-                <option>This Month</option>
+              <select
+                value={days}
+                onChange={e => setDays(Number(e.target.value))}
+                className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl focus:ring-gray-900 focus:border-gray-900 block p-2"
+              >
+                <option value={7}>Last 7 Days</option>
+                <option value={14}>Last 14 Days</option>
+                <option value={30}>Last 30 Days</option>
               </select>
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={fillHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0c0d0d" stopOpacity={0.08} />
-                    <stop offset="95%" stopColor="#0c0d0d" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={[0, 100]} />
-                <Tooltip formatter={(v) => [`${v}%`, 'Fill Level']} />
-                <Area type="monotone" dataKey="fill" stroke="#0c0d0d" strokeWidth={3} fill="url(#fillGrad)" dot={{ fill: '#0c0d0d', r: 5 }} activeDot={{ r: 7 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+
+            {fillHistory.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-gray-400 text-sm">
+                No history yet — snapshots are taken daily at 10 PM.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData(fillHistory, days)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0c0d0d" stopOpacity={0.08} />
+                      <stop offset="95%" stopColor="#0c0d0d" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={[0, 100]} />
+                  <Tooltip formatter={(v) => [`${v}%`, 'Fill Level']} />
+                  <Area type="monotone" dataKey="fill" stroke="#0c0d0d" strokeWidth={3} fill="url(#fillGrad)" dot={{ fill: '#0c0d0d', r: 5 }} activeDot={{ r: 7 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -149,13 +211,25 @@ export default function ContainerDetailsPage() {
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
             <h2 className="text-lg font-medium text-gray-900 mb-4">Container Details</h2>
             <div className="space-y-4">
-              {[
-                ['Container ID', '#C-1042'],
-                ['Waste Type', <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Recycling</span>],
-                ['Capacity', '1100 Liters'],
-                ['Last Pickup', 'Yesterday, 14:30'],
-                ['Sensor Battery', <span className="flex items-center gap-2"><FontAwesomeIcon icon={faBatteryThreeQuarters} className="text-green-500" /> 82%</span>],
-              ].map(([label, value], i) => (
+              {([
+                ['Container ID', container.id],
+                ['Waste Type', (
+                  <span className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full inline-block ${dotColor}`} />
+                    {WASTE_TYPE_LABELS[wasteType] ?? wasteType}
+                  </span>
+                )],
+                ['Capacity', container.capacityLiters ? `${container.capacityLiters} L` : '—'],
+                ['Last Pickup', formatLastPickup(container.lastPickup)],
+                ['Sensor Battery', (
+                  <span className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={faBatteryThreeQuarters} className={
+                      (container.batteryLevel ?? 0) > 50 ? 'text-green-500' : 'text-yellow-500'
+                    } />
+                    {Math.round(container.batteryLevel ?? 0)}%
+                  </span>
+                )],
+              ] as [string, React.ReactNode][]).map(([label, value], i) => (
                 <div key={i} className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-sm text-gray-500">{label}</span>
                   <span className="text-sm font-medium text-gray-900">{value}</span>
@@ -164,37 +238,16 @@ export default function ContainerDetailsPage() {
             </div>
           </div>
 
-          {/* Issues & Photos */}
+          {/* Issues & Actions */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex-1">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-medium text-gray-900">Reported Issues</h2>
-              <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-lg">1 Active</span>
-            </div>
-            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <FontAwesomeIcon icon={faTriangleExclamation} className="text-sm" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-red-800">Partially Blocked Access</h4>
-                  <p className="text-xs text-red-600 mt-1">Reported by Driver #42 • 2 hrs ago</p>
-                  <p className="text-sm text-gray-700 mt-2">A parked vehicle is partially blocking access to the container. Might need a smaller truck or manual move.</p>
-                </div>
-              </div>
+              <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-lg">0 Active</span>
             </div>
 
-            <h3 className="text-sm font-medium text-gray-500 mb-3">Recent Photos</h3>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="h-24 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 relative group cursor-pointer flex items-center justify-center text-gray-400 text-xs">
-                Container photo
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <FontAwesomeIcon icon={faMagnifyingGlass} className="text-white" />
-                </div>
-              </div>
-              <div className="h-24 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-gray-900 hover:text-gray-900 transition-colors cursor-pointer bg-gray-50">
-                <FontAwesomeIcon icon={faCamera} className="mb-1" />
-                <span className="text-xs font-medium">Add Photo</span>
-              </div>
+            <div className="flex flex-col items-center justify-center py-8 text-gray-400 gap-2 mb-6">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="text-2xl text-gray-200" />
+              <p className="text-sm">No active issues</p>
             </div>
 
             <div className="flex flex-col gap-3 mt-auto">

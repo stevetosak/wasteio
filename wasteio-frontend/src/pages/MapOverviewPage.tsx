@@ -11,14 +11,6 @@ import { divIcon, type Map as LeafletMap } from 'leaflet'
 import { useContainers } from '../hooks/useContainers'
 import type { Container } from '../types/container'
 
-type ApiContainer = {
-  id: string
-  name: string
-  latitude: number
-  longitude: number
-  latestFillLevel: number
-}
-
 function markerColor(fillLevel: number): string {
   if (fillLevel > 90) return '#ef4444'
   if (fillLevel >= 50) return '#eab308'
@@ -70,9 +62,7 @@ function markerIcon(container: Container, selected: boolean) {
 
 export default function MapOverviewPage() {
   const navigate = useNavigate()
-  const { containers } = useContainers()
-  const [apiContainers, setApiContainers] = useState<Container[]>([])
-  const [usingApiData, setUsingApiData] = useState(false)
+  const { containers, isDemo } = useContainers()
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [showPreview, setShowPreview] = useState(true)
   const [search, setSearch] = useState('')
@@ -80,55 +70,9 @@ export default function MapOverviewPage() {
   const [selectedContainerId, setSelectedContainerId] = useState<string>('')
   const lastFittedKeyRef = useRef<string>('')
 
-  useEffect(() => {
-    async function loadContainers() {
-      try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('http://localhost:8080/api/devices', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        })
-        if (!response.ok) {
-          throw new Error(`Failed with status ${response.status}`)
-        }
-
-        const data: ApiContainer[] = await response.json()
-        if (!Array.isArray(data) || data.length === 0) {
-          setUsingApiData(false)
-          setApiContainers([])
-          return
-        }
-
-        const mapped = data.map(device => ({
-          id: device.id,
-          name: device.name || `Container ${device.id}`,
-          address: `Lat ${device.latitude.toFixed(4)}, Lng ${device.longitude.toFixed(4)}`,
-          wasteType: 'general' as const,
-          capacityLiters: 1100,
-          fillLevel: Math.max(0, Math.min(100, Math.round(device.latestFillLevel))),
-          batteryLevel: 100,
-          status: 'active' as const,
-          lastPickup: new Date().toISOString(),
-          location: { lat: device.latitude, lng: device.longitude },
-        }))
-
-        setApiContainers(mapped)
-        setUsingApiData(true)
-      } catch {
-        setUsingApiData(false)
-        setApiContainers([])
-      }
-    }
-
-    loadContainers()
-    const intervalId = window.setInterval(loadContainers, 10_000)
-    return () => window.clearInterval(intervalId)
-  }, [])
-
-  const sourceContainers = usingApiData ? apiContainers : containers
-
   const filteredContainers = useMemo(
     () =>
-      sourceContainers.filter(container => {
+      containers.filter(container => {
         if (activeFilter === 'critical' && container.fillLevel <= 90) return false
         if (activeFilter === 'plastic' && container.wasteType !== 'recycling') return false
         if (activeFilter === 'general' && container.wasteType !== 'general') return false
@@ -137,11 +81,11 @@ export default function MapOverviewPage() {
         if (!query) return true
         return (
           container.id.toLowerCase().includes(query) ||
-          container.name.toLowerCase().includes(query) ||
-          container.address.toLowerCase().includes(query)
+          container.name?.toLowerCase().includes(query) ||
+          container.address?.toLowerCase().includes(query)
         )
       }),
-    [sourceContainers, search, activeFilter]
+    [containers, search, activeFilter]
   )
 
   useEffect(() => {
@@ -239,7 +183,7 @@ export default function MapOverviewPage() {
               <FontAwesomeIcon icon={faFilter} className="text-gray-400" /> All Filters
             </button>
             <span className="px-3 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-xs font-semibold text-gray-600">
-              Source: {usingApiData ? 'API' : 'Local Mock'}
+              Source: {isDemo ? 'Demo' : 'Live'}
             </span>
             <div className="h-6 w-px bg-gray-300 self-center mx-1" />
             <button
@@ -368,7 +312,7 @@ export default function MapOverviewPage() {
                 <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full bg-yellow-500 rounded-full transition-all duration-1000" style={{ width: `${selectedContainer.fillLevel}%` }} />
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-right">Last pickup: {new Date(selectedContainer.lastPickup).toLocaleString()}</p>
+                <p className="text-xs text-gray-500 mt-2 text-right">Last pickup: {selectedContainer.lastPickup ? new Date(selectedContainer.lastPickup).toLocaleString() : '—'}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-6">
