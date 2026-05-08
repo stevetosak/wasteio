@@ -1,11 +1,14 @@
 package com.tosak.wasteio.wasteioapi.controller;
 
-import com.tosak.wasteio.wasteioapi.model.Container;
+import com.tosak.wasteio.wasteioapi.dto.ContainerDTO;
+import com.tosak.wasteio.wasteioapi.dto.FillSnapshotDTO;
 import com.tosak.wasteio.wasteioapi.service.ContainerDeviceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
+
 @RestController
 @RequestMapping("/api/devices")
 @CrossOrigin(origins = "*")
@@ -17,23 +20,23 @@ public class ContainerDeviceController {
     }
 
     @PostMapping
-    public ResponseEntity<Container> addDevice(@RequestBody Container device) {
+    public ResponseEntity<ContainerDTO> addDevice(@RequestBody ContainerDTO device) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.addDevice(device));
     }
 
     @GetMapping
-    public ResponseEntity<List<Container>> getAll() {
+    public ResponseEntity<List<ContainerDTO>> getAll() {
         return ResponseEntity.ok(service.getAllDevices());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Container> getById(@PathVariable String id) {
+    public ResponseEntity<ContainerDTO> getById(@PathVariable String id) {
         return ResponseEntity.ok(service.getDeviceById(id));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Container> update(@PathVariable String id,
-                                            @RequestBody Container device) {
+    public ResponseEntity<ContainerDTO> update(@PathVariable String id,
+                                               @RequestBody ContainerDTO device) {
         return ResponseEntity.ok(service.updateDevice(id, device));
     }
 
@@ -44,9 +47,15 @@ public class ContainerDeviceController {
     }
 
     @PostMapping("/{id}/pickup")
-    public ResponseEntity<String> requestPickup(@PathVariable String id) {
-        service.requestPickup(id);
-        return ResponseEntity.ok("Pickup requested for container: " + id);
+    public ResponseEntity<ContainerDTO> requestPickup(@PathVariable String id) {
+        return ResponseEntity.ok(service.requestPickup(id));
+    }
+
+    @GetMapping("/{id}/fill-history")
+    public ResponseEntity<List<FillSnapshotDTO>> getFillHistory(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "7") int days) {
+        return ResponseEntity.ok(service.getFillHistory(id, days));
     }
 
     @ExceptionHandler(RuntimeException.class)

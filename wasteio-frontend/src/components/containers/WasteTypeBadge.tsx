@@ -7,8 +7,8 @@ const config: Record<WasteType, { label: string; className: string }> = {
   hazardous: { label: 'Hazardous', className: 'bg-orange-50 text-orange-700' },
 }
 
-export default function WasteTypeBadge({ type }: { type: WasteType }) {
-  const { label, className } = config[type]
+export default function WasteTypeBadge({ type }: { type: WasteType | undefined }) {
+  const { label, className } = config[type ?? 'general']
   return (
     <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${className}`}>
       {label}

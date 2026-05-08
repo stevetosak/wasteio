@@ -1,5 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Container, ContainerFormData } from '../types/container'
+import {
+  fetchContainers,
+  createContainerApi,
+  updateContainerApi,
+  deleteContainerApi,
+  getContainerByIdApi,
+} from '../lib/containerApi'
 
 const INITIAL_CONTAINERS: Container[] = [
   {
@@ -100,39 +107,155 @@ const INITIAL_CONTAINERS: Container[] = [
   },
 ]
 
+const DEMO_KEY = 'wasteio-demo-mode'
 const delay = (ms: number) => new Promise<void>(res => setTimeout(res, ms))
 
 export function useContainers() {
-  const [containers, setContainers] = useState<Container[]>(INITIAL_CONTAINERS)
+  const [isDemo, setIsDemo] = useState(() => localStorage.getItem(DEMO_KEY) !== 'false')
+
+  // Demo containers are independent local state seeded with mock data.
+  // Live containers are populated from the API and reset on each toggle to live.
+  const [demoContainers, setDemoContainers] = useState<Container[]>(INITIAL_CONTAINERS)
+  const [liveContainers, setLiveContainers] = useState<Container[]>([])
+
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const containers = isDemo ? demoContainers : liveContainers
+
+  // Fetch from API whenever switching to live mode
+  useEffect(() => {
+    if (isDemo) return
+    let cancelled = false
+
+    async function doFetch() {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchContainers()
+        if (!cancelled) setLiveContainers(data)
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load containers')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void doFetch()
+    return () => { cancelled = true }
+  }, [isDemo])
+
+  // Subscribe to the SSE telemetry stream in live mode.
+  // EventSource opens a persistent HTTP connection — the server pushes a JSON
+  // event each time a container's telemetry is updated via MQTT.
+  // We patch only fillLevel and batteryLevel so CRUD state isn't overwritten.
+  useEffect(() => {
+    if (isDemo) return
+
+    const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api'
+    const source = new EventSource(`${BASE}/telemetry/stream`)
+
+    source.onmessage = (event: MessageEvent) => {
+      const { containerId, fillLevel, batteryLevel } = JSON.parse(event.data as string)
+      setLiveContainers(prev =>
+        prev.map(c => c.id === containerId ? { ...c, fillLevel, batteryLevel } : c)
+      )
+    }
+
+    // onerror fires on connection drop, but EventSource retries automatically —
+    // no manual reconnect logic needed.
+    source.onerror = () => {
+      if (source.readyState === EventSource.CLOSED) {
+        setError('Telemetry stream disconnected')
+      }
+    }
+
+    return () => source.close()
+  }, [isDemo])
+
+  function toggleDemo() {
+    setIsDemo(prev => {
+      const next = !prev
+      localStorage.setItem(DEMO_KEY, String(next))
+      return next
+    })
+  }
 
   async function createContainer(data: ContainerFormData): Promise<void> {
-    setLoading(true)
-    await delay(400)
-    const newContainer: Container = {
-      ...data,
-      id: `C-${Math.floor(1000 + Math.random() * 9000)}`,
-      fillLevel: 0,
-      batteryLevel: 100,
-      lastPickup: new Date().toISOString(),
+    if (isDemo) {
+      setLoading(true)
+      await delay(400)
+      setDemoContainers(prev => [...prev, {
+        ...data,
+        id: `C-${Math.floor(1000 + Math.random() * 9000)}`,
+        fillLevel: 0,
+        batteryLevel: 100,
+        lastPickup: new Date().toISOString(),
+      }])
+      setLoading(false)
+      return
     }
-    setContainers(prev => [...prev, newContainer])
-    setLoading(false)
+    setLoading(true)
+    setError(null)
+    try {
+      const created = await createContainerApi(data)
+      setLiveContainers(prev => [...prev, created])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create container')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function updateContainer(id: string, data: ContainerFormData): Promise<void> {
+    if (isDemo) {
+      setLoading(true)
+      await delay(400)
+      setDemoContainers(prev => prev.map(c => (c.id === id ? { ...c, ...data } : c)))
+      setLoading(false)
+      return
+    }
     setLoading(true)
-    await delay(400)
-    setContainers(prev => prev.map(c => (c.id === id ? { ...c, ...data } : c)))
-    setLoading(false)
+    setError(null)
+    try {
+      const updated = await updateContainerApi(id, data)
+      setLiveContainers(prev => prev.map(c => (c.id === id ? updated : c)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update container')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function deleteContainer(id: string): Promise<void> {
+    if (isDemo) {
+      setLoading(true)
+      await delay(400)
+      setDemoContainers(prev => prev.filter(c => c.id !== id))
+      setLoading(false)
+      return
+    }
     setLoading(true)
-    await delay(400)
-    setContainers(prev => prev.filter(c => c.id !== id))
-    setLoading(false)
+    setError(null)
+    try {
+      await deleteContainerApi(id)
+      setLiveContainers(prev => prev.filter(c => c.id !== id))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete container')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  return { containers, loading, createContainer, updateContainer, deleteContainer }
+  async function refreshContainer(id: string): Promise<void> {
+    if (isDemo) return
+    try {
+      const updated = await getContainerByIdApi(id)
+      setLiveContainers(prev => prev.map(c => c.id === id ? updated : c))
+    } catch {
+      // silent — SSE will catch up on next telemetry tick
+    }
+  }
+
+  return { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer }
 }

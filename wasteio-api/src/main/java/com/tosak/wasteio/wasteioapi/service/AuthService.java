@@ -1,6 +1,8 @@
 package com.tosak.wasteio.wasteioapi.service;
 
 import com.tosak.wasteio.wasteioapi.dto.LoginResponse;
+import com.tosak.wasteio.wasteioapi.dto.TokenResponse;
+import com.tosak.wasteio.wasteioapi.dto.UserResponse;
 import com.tosak.wasteio.wasteioapi.model.*;
 import com.tosak.wasteio.wasteioapi.repository.*;
 import com.tosak.wasteio.wasteioapi.security.JwtTokenProvider;
@@ -8,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -66,6 +69,33 @@ public class AuthService {
         tokenRepository.save(regToken);
         
         return savedUser;
+    }
+
+    // ADMIN -> list all users
+    public List<UserResponse> listUsers() {
+        return userRepository.findAll().stream()
+                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole()))
+                .toList();
+    }
+
+    // ADMIN -> delete user
+    @Transactional
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found");
+        }
+        userRepository.deleteById(id);
+    }
+
+    // ADMIN -> list all tokens
+    public List<TokenResponse> listTokens() {
+        return tokenRepository.findAll().stream()
+                .map(t -> new TokenResponse(
+                        t.getId(),
+                        t.getToken(),
+                        t.isUsed(),
+                        t.getCreatedBy() != null ? t.getCreatedBy().getEmail() : null))
+                .toList();
     }
 
     // LOGIN
