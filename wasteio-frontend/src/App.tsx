@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
+import AdminRoute from './components/layout/AdminRoute'
 import AppLayout from './components/layout/AppLayout'
 import WelcomePage from './pages/WelcomePage'
 import SignInPage from './pages/SignInPage'
@@ -14,6 +15,7 @@ import ActivePickupPage from './pages/ActivePickupPage'
 import AlertsPage from './pages/AlertsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
+import AdminPage from './pages/AdminPage'
 
 export default function App() {
   return (
@@ -37,6 +39,13 @@ export default function App() {
               <Route path="/alerts" element={<AlertsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+          </Route>
+
+          {/* Admin-only */}
+          <Route element={<AdminRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/admin" element={<AdminPage />} />
             </Route>
           </Route>
 
