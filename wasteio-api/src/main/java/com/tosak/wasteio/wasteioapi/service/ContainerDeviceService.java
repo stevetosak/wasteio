@@ -1,41 +1,59 @@
 package com.tosak.wasteio.wasteioapi.service;
 
+import com.tosak.wasteio.wasteioapi.dto.ContainerDTO;
 import com.tosak.wasteio.wasteioapi.model.Container;
+import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
+import com.tosak.wasteio.wasteioapi.model.Telemetry;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
+import com.tosak.wasteio.wasteioapi.repository.PickupRepository;
+import com.tosak.wasteio.wasteioapi.repository.TelemetryRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+
 @Slf4j
 @Service
 public class ContainerDeviceService {
     private final ContainerRepository repository;
+    private final TelemetryRepository telemetryRepository;
+    private final PickupRepository pickupRepository;
     private final MessageChannel mqttOutboundChannel;
 
-    public ContainerDeviceService(ContainerRepository repository, @Qualifier("mqttOutboundChannel") MessageChannel mqttOutboundChannel) {
+    public ContainerDeviceService(
+            ContainerRepository repository,
+            TelemetryRepository telemetryRepository,
+            PickupRepository pickupRepository,
+            @Qualifier("mqttOutboundChannel") MessageChannel mqttOutboundChannel) {
         this.repository = repository;
+        this.telemetryRepository = telemetryRepository;
+        this.pickupRepository = pickupRepository;
         this.mqttOutboundChannel = mqttOutboundChannel;
     }
 
-    public Container addDevice(Container device) {
-        if (repository.existsById(device.getId())) {
-            throw new RuntimeException("Device with id " + device.getId() + " already exists");
+    public ContainerDTO addDevice(ContainerDTO dto) {
+        if (repository.existsById(dto.getId())) {
+            throw new RuntimeException("Device with id " + dto.getId() + " already exists");
         }
-        return repository.save(device);
+        return toDTO(repository.save(fromDTO(dto)));
     }
 
-    public List<Container> getAllDevices() {
-        return repository.findAll();
+    public List<ContainerDTO> getAllDevices() {
+
+        List<ContainerDTO> containerDTOS =  repository.findAll().stream().map(this::toDTO).toList();
+
+        return containerDTOS;
     }
 
-    public Container getDeviceById(String id) {
+    public ContainerDTO getDeviceById(String id) {
         return repository.findById(id)
+                .map(this::toDTO)
                 .orElseThrow(() -> new RuntimeException("Device not found: " + id));
     }
 
@@ -46,26 +64,26 @@ public class ContainerDeviceService {
         repository.deleteById(id);
     }
 
-    public Container updateDevice(String id, Container device) {
-        if (!repository.existsById(id)) {
-            throw new RuntimeException("Device not found: " + id);
-        }
-        device.setId(id);
-        return repository.save(device);
+    public ContainerDTO updateDevice(String id, ContainerDTO dto) {
+        Container container = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Device not found: " + id));
+        container.setName(dto.getName());
+        container.setAddress(dto.getAddress());
+        container.setWasteType(dto.getWasteType());
+        container.setCapacity(dto.getCapacityLiters());
+        return toDTO(repository.save(container));
     }
 
     public void requestPickup(String containerId) {
-
         if (!repository.existsById(containerId)) {
             throw new RuntimeException("Device not found: " + containerId);
         }
-        
         try {
             String topic = "waste/containers/" + containerId + "/commands";
             Message<?> message = MessageBuilder.withPayload("pickup")
                     .setHeader("mqtt_topic", topic)
                     .build();
-            
+
             boolean sent = mqttOutboundChannel.send(message);
 
             if (!sent) {
@@ -80,5 +98,44 @@ public class ContainerDeviceService {
             throw new RuntimeException("Failed to send pickup command", e);
         }
     }
-    
+
+    private Container fromDTO(ContainerDTO dto) {
+        Container container = new Container();
+        container.setId(dto.getId());
+        container.setName(dto.getName());
+        container.setAddress(dto.getAddress());
+        container.setWasteType(dto.getWasteType());
+        container.setCapacity(dto.getCapacityLiters());
+        container.setDeviceStatus(dto.getStatus() != null ? dto.getStatus() : DeviceStatus.ACTIVE);
+        if (dto.getLocation() != null) {
+            container.setLatitude(dto.getLocation().getLat());
+            container.setLongitude(dto.getLocation().getLng());
+        }
+        return container;
+    }
+
+    private ContainerDTO toDTO(Container container) {
+        double batteryLevel = telemetryRepository
+                .findTopByContainerIdOrderByRecordedAtDesc(container.getId())
+                .map(Telemetry::getBatteryLevel)
+                .orElse(0.0);
+
+        String lastPickup = pickupRepository
+                .findLatestByContainerId(container.getId())
+                .map(p -> p.getPickup_time().toString())
+                .orElse(null);
+
+        return ContainerDTO.builder()
+                .id(container.getId())
+                .name(container.getName())
+                .address(container.getAddress())
+                .wasteType(container.getWasteType())
+                .capacityLiters(container.getCapacity())
+                .fillLevel(container.getLatestFillLevel())
+                .batteryLevel(batteryLevel)
+                .status(container.getDeviceStatus())
+                .lastPickup(lastPickup)
+                .location(new ContainerDTO.LocationDTO(container.getLatitude(), container.getLongitude()))
+                .build();
+    }
 }
