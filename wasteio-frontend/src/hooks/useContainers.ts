@@ -144,6 +144,34 @@ export function useContainers() {
     return () => { cancelled = true }
   }, [isDemo])
 
+  // Subscribe to the SSE telemetry stream in live mode.
+  // EventSource opens a persistent HTTP connection — the server pushes a JSON
+  // event each time a container's telemetry is updated via MQTT.
+  // We patch only fillLevel and batteryLevel so CRUD state isn't overwritten.
+  useEffect(() => {
+    if (isDemo) return
+
+    const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api'
+    const source = new EventSource(`${BASE}/telemetry/stream`)
+
+    source.onmessage = (event: MessageEvent) => {
+      const { containerId, fillLevel, batteryLevel } = JSON.parse(event.data as string)
+      setLiveContainers(prev =>
+        prev.map(c => c.id === containerId ? { ...c, fillLevel, batteryLevel } : c)
+      )
+    }
+
+    // onerror fires on connection drop, but EventSource retries automatically —
+    // no manual reconnect logic needed.
+    source.onerror = () => {
+      if (source.readyState === EventSource.CLOSED) {
+        setError('Telemetry stream disconnected')
+      }
+    }
+
+    return () => source.close()
+  }, [isDemo])
+
   function toggleDemo() {
     setIsDemo(prev => {
       const next = !prev
