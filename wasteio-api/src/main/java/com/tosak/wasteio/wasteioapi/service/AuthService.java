@@ -74,7 +74,7 @@ public class AuthService {
     // ADMIN -> list all users
     public List<UserResponse> listUsers() {
         return userRepository.findAll().stream()
-                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getRole()))
+                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(),u.getPhoneNumber(), u.getRole()))
                 .toList();
     }
 
