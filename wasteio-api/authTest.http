@@ -21,7 +21,7 @@ GET http://localhost:8080/api/devices
 
 ### Step 4: Access protected endpoint WITH valid token // POSLE BEARER OSTAVI 1 PRAZNO MESTO I KOPIRAJ GO TOKENOT OD STEP 2 
 GET http://localhost:8080/api/devices
-Authorization: Bearer <TOKEN_TUKA>
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc4MjQ4MzkzLCJleHAiOjE3NzgzMzQ3OTN9.plFpwYhHHUMua8HB3Lgk_JgWznvHEPA2aUUazhreOyc
 
 ###
 
