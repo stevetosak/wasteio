@@ -24,7 +24,5 @@ public class Pickup {
     
     @Column(name = "fill_level_before")
     private Double fill_level_before;
-    
-    
-    
+
 }
