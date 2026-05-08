@@ -1,6 +1,7 @@
 package com.tosak.wasteio.wasteioapi.controller;
 
 import com.tosak.wasteio.wasteioapi.dto.LoginResponse;
+import com.tosak.wasteio.wasteioapi.dto.UserResponse;
 import com.tosak.wasteio.wasteioapi.model.User;
 import com.tosak.wasteio.wasteioapi.service.AuthService;
 import org.springframework.web.bind.annotation.*;
@@ -16,11 +17,12 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public User register(@RequestParam String token,
+    public UserResponse register(@RequestParam String token,
                          @RequestParam String name,
                          @RequestParam String email,
                          @RequestParam String password) {
-        return authService.register(token, name, email, password);
+        User user = authService.register(token, name, email, password);
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole());
     }
 
     @PostMapping("/login")

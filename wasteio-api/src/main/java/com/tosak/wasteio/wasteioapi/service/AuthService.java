@@ -4,6 +4,7 @@ import com.tosak.wasteio.wasteioapi.dto.LoginResponse;
 import com.tosak.wasteio.wasteioapi.model.*;
 import com.tosak.wasteio.wasteioapi.repository.*;
 import com.tosak.wasteio.wasteioapi.security.JwtTokenProvider;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -15,16 +16,21 @@ public class AuthService {
     private final UserRepository userRepository;
     private final TokenRepository tokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final BCryptPasswordEncoder encoder;
 
-    public AuthService(UserRepository userRepository, TokenRepository tokenRepository, JwtTokenProvider jwtTokenProvider) {
+    public AuthService(UserRepository userRepository, TokenRepository tokenRepository, JwtTokenProvider jwtTokenProvider, BCryptPasswordEncoder encoder) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.encoder = encoder;
     }
 
     // ADMIN -> generate token
-    public String generateToken(User admin) {
+    public String generateToken(String email) {
+
+        User admin = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Admin not found"));
+        
         String token = UUID.randomUUID().toString();
 
         RegistrationToken regToken = new RegistrationToken();
@@ -38,6 +44,7 @@ public class AuthService {
     }
 
     // REGISTER EMPLOYEE
+    @Transactional
     public User register(String token, String name, String email, String password) {
 
         RegistrationToken regToken = tokenRepository.findByToken(token)
@@ -53,10 +60,11 @@ public class AuthService {
         user.setPassword(encoder.encode(password));
         user.setRole(Role.EMPLOYEE);
 
+        User savedUser = userRepository.save(user);
         regToken.setUsed(true);
-
         tokenRepository.save(regToken);
-        return userRepository.save(user);
+        
+        return savedUser;
     }
 
     // LOGIN

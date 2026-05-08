@@ -1,6 +1,7 @@
 package com.tosak.wasteio.wasteioapi.security;
 
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -13,18 +14,21 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
     
-    @Value("${jwt.secret}")
-    private String jwtSecret;
+    private final SecretKey key;
+    private final long jwtExpiration;
     
-    @Value("${jwt.expiration}")
-    private long jwtExpiration;
+    public JwtTokenProvider(
+                @Value("${jwt.secret}") String jwtSecret,
+                @Value("${jwt.expiration}") long jwtExpiration){
+        this.jwtExpiration = jwtExpiration;
+        this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+    }
+            
     
     
     public String generateToken(String email){
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
-
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
         
         return Jwts.builder()
                 .subject(email)
@@ -36,7 +40,6 @@ public class JwtTokenProvider {
     
     public boolean validateToken(String token){
         try{
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
             Jwts.parser().verifyWith(key)
                     .build()
                     .parseSignedClaims(token);
@@ -49,7 +52,6 @@ public class JwtTokenProvider {
     
     public String getEmailFromToken(String token){
         try{
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
             return Jwts.parser()
                     .verifyWith(key)
                     .build()

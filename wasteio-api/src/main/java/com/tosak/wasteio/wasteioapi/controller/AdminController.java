@@ -2,10 +2,15 @@ package com.tosak.wasteio.wasteioapi.controller;
 
 import com.tosak.wasteio.wasteioapi.model.User;
 import com.tosak.wasteio.wasteioapi.service.AuthService;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/admin")
@@ -18,7 +23,13 @@ public class AdminController {
     }
 
     @PostMapping("/generate-token")
-    public String generateToken(@RequestBody User admin) {
-        return authService.generateToken(admin);
+    @PreAuthorize("hasRole('ADMIN')")
+    public String generateToken() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        String email = authentication.getName();
+        return authService.generateToken(email);
     }
 }
