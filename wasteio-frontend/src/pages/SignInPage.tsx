@@ -1,29 +1,36 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faLeaf, faEnvelope, faLock, faEyeSlash, faEye, faRoute,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGoogle, faMicrosoft } from '@fortawesome/free-brands-svg-icons'
+import { useAuth } from '../context/AuthContext'
 
 export default function SignInPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { login } = useAuth()
+  const justRegistered = searchParams.get('registered') === '1'
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<{email?: string, password?: string}>({})
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newErrors: {email?: string, password?: string} = {}
-    if (!email) newErrors.email = 'Email or phone is required'
-    if (!password) newErrors.password = 'Password is required'
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
+    setError('')
+    setLoading(true)
+    try {
+      await login(email, password)
+      navigate('/map')
+    } catch {
+      setError('Invalid email or password.')
+    } finally {
+      setLoading(false)
     }
-    setErrors({})
-    navigate('/jurisdiction')
   }
 
   return (
@@ -47,16 +54,28 @@ export default function SignInPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {justRegistered && (
+                <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+                  Account created. Sign in to continue.
+                </div>
+              )}
+              {error && (
+                <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">Email or Phone</label>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                     <FontAwesomeIcon icon={faEnvelope} />
                   </div>
                   <input
-                    type="text" id="email" placeholder="worker@ecoskopje.mk"
+                    type="email" id="email" placeholder="worker@ecoskopje.mk"
                     value={email} onChange={e => setEmail(e.target.value)}
-                    className={`block w-full pl-10 pr-3 py-3 border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white ${errors.email ? 'border-red-400' : 'border-gray-200'}`}
+                    required
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white"
                   />
                 </div>
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
@@ -71,7 +90,8 @@ export default function SignInPage() {
                   <input
                     type={showPassword ? 'text' : 'password'} id="password" placeholder="••••••••"
                     value={password} onChange={e => setPassword(e.target.value)}
-                    className={`block w-full pl-10 pr-10 py-3 border rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white ${errors.password ? 'border-red-400' : 'border-gray-200'}`}
+                    required
+                    className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
                     <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} />
@@ -88,8 +108,12 @@ export default function SignInPage() {
                 <a href="#" className="text-sm font-medium text-green-600 hover:text-green-500 transition-colors">Forgot password?</a>
               </div>
 
-              <button type="submit" className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-sm text-sm font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors mt-6">
-                Sign in
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-sm text-sm font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Signing in…' : 'Sign in'}
               </button>
 
               <div className="relative py-4">

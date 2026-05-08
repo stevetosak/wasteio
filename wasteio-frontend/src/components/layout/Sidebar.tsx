@@ -2,8 +2,9 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faLeaf, faMapLocationDot, faRoute, faTrashCan, faBell,
-  faChartPie, faGear,
+  faChartPie, faGear, faShieldHalved, faArrowRightFromBracket,
 } from '@fortawesome/free-solid-svg-icons'
+import { useAuth } from '../../context/AuthContext'
 
 const navItems = [
   { to: '/map', icon: faMapLocationDot, label: 'Map Overview' },
@@ -13,8 +14,18 @@ const navItems = [
   { to: '/reports', icon: faChartPie, label: 'Reports' },
 ]
 
+function initials(name: string) {
+  return name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
+}
+
 export default function Sidebar() {
   const navigate = useNavigate()
+  const { user, logout } = useAuth()
+
+  function handleLogout() {
+    logout()
+    navigate('/signin')
+  }
 
   return (
     <aside className="w-20 lg:w-64 bg-white border-r border-gray-100 flex flex-col h-full flex-shrink-0 z-50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.05)]">
@@ -30,13 +41,13 @@ export default function Sidebar() {
 
       {/* User Profile */}
       <div className="p-4 border-b border-gray-50 hidden lg:block">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-xl transition-colors bg-gray-50 border border-gray-100 cursor-pointer hover:bg-gray-100">
-          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-sm border-2 border-white shadow-sm">
-            MK
+        <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-gray-50 border border-gray-100">
+          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-sm border-2 border-white shadow-sm shrink-0">
+            {user ? initials(user.name) : '?'}
           </div>
           <div className="overflow-hidden flex-1">
-            <p className="text-sm font-semibold text-gray-900 truncate">Marko K.</p>
-            <p className="text-xs text-gray-500 truncate">Admin</p>
+            <p className="text-sm font-semibold text-gray-900 truncate">{user?.name ?? '—'}</p>
+            <p className="text-xs text-gray-500 truncate capitalize">{user?.role?.toLowerCase() ?? ''}</p>
           </div>
         </div>
       </div>
@@ -73,10 +84,38 @@ export default function Sidebar() {
             )}
           </NavLink>
         ))}
+
+        {/* Admin link — only visible to admins */}
+        {user?.role === 'ADMIN' && (
+          <>
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-6 mb-2 px-3 hidden lg:block">Admin</div>
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-colors group ${
+                  isActive
+                    ? 'bg-purple-50 text-purple-600 border border-purple-100'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                    isActive ? 'bg-purple-500 text-white shadow-md' : 'group-hover:bg-white group-hover:shadow-sm'
+                  }`}>
+                    <FontAwesomeIcon icon={faShieldHalved} />
+                  </div>
+                  <span className="hidden lg:block">Admin Panel</span>
+                </>
+              )}
+            </NavLink>
+          </>
+        )}
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-gray-50">
+      <div className="p-4 border-t border-gray-50 flex flex-col gap-1">
         <NavLink
           to="/settings"
           className={({ isActive }) =>
@@ -96,6 +135,16 @@ export default function Sidebar() {
             </>
           )}
         </NavLink>
+
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-colors text-gray-500 hover:bg-red-50 hover:text-red-600 group w-full"
+        >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all group-hover:bg-white group-hover:shadow-sm">
+            <FontAwesomeIcon icon={faArrowRightFromBracket} />
+          </div>
+          <span className="hidden lg:block">Log out</span>
+        </button>
       </div>
     </aside>
   )

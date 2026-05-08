@@ -20,6 +20,13 @@ type Telemetry struct {
 	Location    config.Location `json:"location"`
 }
 
+type Event struct {
+	ContainerID string    `json:"containerId"`
+	EventType   string    `json:"eventType"`
+	FillLevel   float64   `json:"fillLevel"`
+	Timestamp   time.Time `json:"timestamp"`
+}
+
 type Device struct {
 	cfg       config.DeviceConfig
 	fillLevel float64
@@ -48,8 +55,6 @@ func (d *Device) connect(brokerURL string) error {
 
 	d.client = mqtt.NewClient(opts)
 
-	// Connect returns a Token — an async operation handle.
-	// Wait() blocks until it completes, then we check for errors.
 	if token := d.client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
@@ -69,12 +74,15 @@ func (d *Device) connect(brokerURL string) error {
 	return token.Error()
 }
 
-func (d *Device) update() {
-	d.fillLevel += 1.5 + rand.Float64()*2.0 // drift up 1.5–3.5% per tick
+func (d *Device) updateFill(snap config.ConfigSnapshot) {
+	d.fillLevel += snap.FillRateMin + rand.Float64()*(snap.FillRateMax-snap.FillRateMin)
 	if d.fillLevel > 100 {
 		d.fillLevel = 100
 	}
-	d.battery -= 0.1 + rand.Float64()*0.1
+}
+
+func (d *Device) updateBattery(snap config.ConfigSnapshot) {
+	d.battery -= snap.BatteryDrainMin + rand.Float64()*(snap.BatteryDrainMax-snap.BatteryDrainMin)
 	if d.battery < 0 {
 		d.battery = 0
 	}
@@ -95,7 +103,27 @@ func (d *Device) buildPayload() ([]byte, error) {
 	return json.Marshal(t)
 }
 
-func (d *Device) Run(ctx context.Context, brokerURL string) {
+func (d *Device) publishEvent(eventType string) {
+	topic := fmt.Sprintf("waste/containers/%s/events", d.cfg.ContainerID)
+	payload, err := json.Marshal(Event{
+		ContainerID: d.cfg.ContainerID,
+		EventType:   eventType,
+		FillLevel:   round2(d.fillLevel),
+		Timestamp:   time.Now().UTC(),
+	})
+	if err != nil {
+		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.ContainerID, err)
+		return
+	}
+	// QoS 1: the backend needs to receive this exactly once.
+	token := d.client.Publish(topic, 1, false, payload)
+	token.Wait()
+	if token.Error() != nil {
+		fmt.Printf("[%s] event publish error: %v\n", d.cfg.ContainerID, token.Error())
+	}
+}
+
+func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.RuntimeConfig) {
 	if err := d.connect(brokerURL); err != nil {
 		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.ContainerID, err)
 		return
@@ -105,8 +133,27 @@ func (d *Device) Run(ctx context.Context, brokerURL string) {
 
 	telemetryTopic := fmt.Sprintf("waste/containers/%s/telemetry", d.cfg.ContainerID)
 
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+	snap := rtCfg.Snapshot()
+
+	// Random offset so devices don't all fire their tickers at the same time.
+	// Each device sleeps a random fraction of its fill interval before starting.
+	select {
+	case <-time.After(time.Duration(rand.Int63n(int64(snap.FillInterval)))):
+	case <-ctx.Done():
+		return
+	}
+
+	fillInterval := snap.FillInterval
+	batteryInterval := snap.BatteryInterval
+	telemetryInterval := snap.TelemetryInterval
+
+	fillTicker := time.NewTicker(fillInterval)
+	batteryTicker := time.NewTicker(batteryInterval)
+	telemetryTicker := time.NewTicker(telemetryInterval)
+	defer fillTicker.Stop()
+	defer batteryTicker.Stop()
+	defer telemetryTicker.Stop()
+
 	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.ContainerID, d.fillLevel)
 
 	for {
@@ -116,12 +163,33 @@ func (d *Device) Run(ctx context.Context, brokerURL string) {
 			return
 
 		case <-d.pickupCh:
-			// Simulate workers emptying the container — drop fill to 0–5%.
-			d.fillLevel = rand.Float64() * 5
-			fmt.Printf("[%s] pickup command received, fill reset to %.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+			// Drop fill by ~80%, leaving a small residual (workers never empty perfectly).
+			d.fillLevel *= 0.15 + rand.Float64()*0.1
+			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+			d.publishEvent("emptied")
 
-		case <-ticker.C:
-			d.update()
+		case <-fillTicker.C:
+			snap = rtCfg.Snapshot()
+			if snap.FillInterval != fillInterval {
+				fillInterval = snap.FillInterval
+				fillTicker.Reset(fillInterval)
+			}
+			d.updateFill(snap)
+
+		case <-batteryTicker.C:
+			snap = rtCfg.Snapshot()
+			if snap.BatteryInterval != batteryInterval {
+				batteryInterval = snap.BatteryInterval
+				batteryTicker.Reset(batteryInterval)
+			}
+			d.updateBattery(snap)
+
+		case <-telemetryTicker.C:
+			snap = rtCfg.Snapshot()
+			if snap.TelemetryInterval != telemetryInterval {
+				telemetryInterval = snap.TelemetryInterval
+				telemetryTicker.Reset(telemetryInterval)
+			}
 			payload, err := d.buildPayload()
 			if err != nil {
 				fmt.Printf("[%s] marshal error: %v\n", d.cfg.ContainerID, err)
