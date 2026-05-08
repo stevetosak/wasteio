@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -6,16 +6,151 @@ import {
   faPlus, faMinus, faLocationCrosshairs, faLayerGroup,
   faXmark, faTemperatureHalf, faBatteryThreeQuarters, faRoute,
 } from '@fortawesome/free-solid-svg-icons'
-import MapPlaceholder from '../components/ui/MapPlaceholder'
+import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
+import { divIcon, type Map as LeafletMap } from 'leaflet'
+import { useContainers } from '../hooks/useContainers'
+import type { Container } from '../types/container'
+
+function markerColor(fillLevel: number): string {
+  if (fillLevel > 90) return '#ef4444'
+  if (fillLevel >= 50) return '#eab308'
+  return '#22c55e'
+}
+
+function previewBadge(fillLevel: number): string {
+  if (fillLevel > 90) return 'Critical'
+  if (fillLevel >= 50) return 'Requires Pickup Soon'
+  return 'Low Fill'
+}
+
+function wasteEmoji(wasteType: Container['wasteType']): string {
+  if (wasteType === 'recycling') return '♻'
+  if (wasteType === 'organic') return '🌿'
+  if (wasteType === 'hazardous') return '⚠'
+  return '🗑'
+}
+
+function markerIcon(container: Container, selected: boolean) {
+  const color = markerColor(container.fillLevel)
+  const size = selected ? 34 : 28
+  const border = selected ? '3px solid #111827' : '2px solid #ffffff'
+  const shadow = selected
+    ? '0 8px 18px rgba(0,0,0,0.35)'
+    : '0 6px 12px rgba(0,0,0,0.25)'
+
+  return divIcon({
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="
+      width:${size}px;
+      height:${size}px;
+      border-radius:9999px;
+      background:${color};
+      border:${border};
+      box-shadow:${shadow};
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:${selected ? 15 : 13}px;
+      color:white;
+      transform:${selected ? 'scale(1.08)' : 'scale(1)'};
+      transition:all 150ms ease;
+    ">${wasteEmoji(container.wasteType)}</div>`,
+  })
+}
 
 export default function MapOverviewPage() {
   const navigate = useNavigate()
+  const { containers, isDemo } = useContainers()
+  const [map, setMap] = useState<LeafletMap | null>(null)
   const [showPreview, setShowPreview] = useState(true)
+  const [search, setSearch] = useState('')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'critical' | 'plastic' | 'general'>('all')
+  const [selectedContainerId, setSelectedContainerId] = useState<string>('')
+  const lastFittedKeyRef = useRef<string>('')
+
+  const filteredContainers = useMemo(
+    () =>
+      containers.filter(container => {
+        if (activeFilter === 'critical' && container.fillLevel <= 90) return false
+        if (activeFilter === 'plastic' && container.wasteType !== 'recycling') return false
+        if (activeFilter === 'general' && container.wasteType !== 'general') return false
+
+        const query = search.trim().toLowerCase()
+        if (!query) return true
+        return (
+          container.id.toLowerCase().includes(query) ||
+          container.name?.toLowerCase().includes(query) ||
+          container.address?.toLowerCase().includes(query)
+        )
+      }),
+    [containers, search, activeFilter]
+  )
+
+  useEffect(() => {
+    if (!filteredContainers.length) {
+      setSelectedContainerId('')
+      return
+    }
+
+    if (!selectedContainerId || !filteredContainers.some(c => c.id === selectedContainerId)) {
+      setSelectedContainerId(filteredContainers[0].id)
+    }
+  }, [filteredContainers, selectedContainerId])
+
+  useEffect(() => {
+    if (!map || !filteredContainers.length) return
+
+    const fitKey = filteredContainers
+      .map(container => `${container.id}:${container.location.lat.toFixed(6)},${container.location.lng.toFixed(6)}`)
+      .join('|')
+    if (fitKey === lastFittedKeyRef.current) return
+    lastFittedKeyRef.current = fitKey
+
+    if (filteredContainers.length === 1) {
+      const only = filteredContainers[0]
+      map.setView([only.location.lat, only.location.lng], 15)
+      return
+    }
+
+    const bounds = filteredContainers.map(container => [container.location.lat, container.location.lng] as [number, number])
+    map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 })
+  }, [map, filteredContainers])
+
+  const selectedContainer: Container | undefined =
+    filteredContainers.find(c => c.id === selectedContainerId) ?? filteredContainers[0]
 
   return (
     <div className="flex-1 relative h-full flex flex-col overflow-hidden">
       {/* Map Background */}
-      <MapPlaceholder className="absolute inset-0 z-0" />
+      <MapContainer center={[41.9981, 21.4254]} zoom={13} className="absolute inset-0 z-0" ref={setMap}>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {filteredContainers.map(container => (
+          <Marker
+            key={container.id}
+            position={[container.location.lat, container.location.lng]}
+            icon={markerIcon(container, container.id === selectedContainerId)}
+            eventHandlers={{
+              click: () => {
+                setSelectedContainerId(container.id)
+                setShowPreview(true)
+              },
+            }}
+          >
+            <Popup>
+              <div className="text-sm">
+                <p className="font-semibold">{container.name}</p>
+                <p className="text-gray-600">{container.address}</p>
+                <p className="mt-1">Fill level: {container.fillLevel}%</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
 
       {/* Top Header Overlay */}
       <header className="absolute top-0 left-0 right-0 z-20 p-4 lg:p-6 pointer-events-none flex justify-between items-start gap-4">
@@ -25,23 +160,60 @@ export default function MapOverviewPage() {
             <div className="pl-3 text-gray-400">
               <FontAwesomeIcon icon={faMagnifyingGlass} />
             </div>
-            <input type="text" placeholder="Search container ID, address, or street..." className="w-full bg-transparent border-none focus:outline-none focus:ring-0 px-3 py-2 text-sm text-gray-800 placeholder-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search container ID, address, or street..."
+              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 px-3 py-2 text-sm text-gray-800 placeholder-gray-400"
+            />
             <button className="w-10 h-10 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors flex items-center justify-center">
               <FontAwesomeIcon icon={faMicrophone} />
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button className="px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-sm font-medium text-gray-700 hover:border-green-300 hover:bg-green-50 transition-all flex items-center gap-2">
+            <button
+              onClick={() => setActiveFilter('all')}
+              className={`px-4 py-2 rounded-xl shadow-sm border text-sm font-medium transition-all flex items-center gap-2 ${
+                activeFilter === 'all'
+                  ? 'bg-green-50 border-green-300 text-green-700'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-green-300 hover:bg-green-50'
+              }`}
+            >
               <FontAwesomeIcon icon={faFilter} className="text-gray-400" /> All Filters
             </button>
+            <span className="px-3 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-xs font-semibold text-gray-600">
+              Source: {isDemo ? 'Demo' : 'Live'}
+            </span>
             <div className="h-6 w-px bg-gray-300 self-center mx-1" />
-            <button className="px-4 py-2 bg-red-50 border border-red-200 rounded-xl shadow-sm text-sm font-medium text-red-700 hover:bg-red-100 transition-all flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500" /> Critical (12)
+            <button
+              onClick={() => setActiveFilter('critical')}
+              className={`px-4 py-2 rounded-xl shadow-sm text-sm font-medium transition-all flex items-center gap-2 ${
+                activeFilter === 'critical'
+                  ? 'bg-red-100 border border-red-300 text-red-800'
+                  : 'bg-red-50 border border-red-200 text-red-700 hover:bg-red-100'
+              }`}
+            >
+              <div className="w-2 h-2 rounded-full bg-red-500" /> Critical
             </button>
-            <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2">
+            <button
+              onClick={() => setActiveFilter('plastic')}
+              className={`px-4 py-2 rounded-xl shadow-sm text-sm font-medium transition-all flex items-center gap-2 ${
+                activeFilter === 'plastic'
+                  ? 'bg-blue-50 border border-blue-300 text-blue-700'
+                  : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
               <FontAwesomeIcon icon={faRecycle} className="text-blue-500" /> Plastic
             </button>
-            <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2">
+            <button
+              onClick={() => setActiveFilter('general')}
+              className={`px-4 py-2 rounded-xl shadow-sm text-sm font-medium transition-all flex items-center gap-2 ${
+                activeFilter === 'general'
+                  ? 'bg-gray-100 border border-gray-300 text-gray-800'
+                  : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
               <FontAwesomeIcon icon={faTrashCan} className="text-gray-500" /> General
             </button>
           </div>
@@ -50,13 +222,22 @@ export default function MapOverviewPage() {
         {/* Right Controls */}
         <div className="flex flex-col gap-3 pointer-events-auto items-end">
           <div className="bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 flex flex-col overflow-hidden">
-            <button className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-green-600 transition-colors border-b border-gray-100">
+            <button
+              onClick={() => map?.zoomIn()}
+              className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-green-600 transition-colors border-b border-gray-100"
+            >
               <FontAwesomeIcon icon={faPlus} />
             </button>
-            <button className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-green-600 transition-colors border-b border-gray-100">
+            <button
+              onClick={() => map?.zoomOut()}
+              className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-green-600 transition-colors border-b border-gray-100"
+            >
               <FontAwesomeIcon icon={faMinus} />
             </button>
-            <button className="w-12 h-12 flex items-center justify-center text-green-600 bg-green-50 hover:bg-green-100 transition-colors">
+            <button
+              onClick={() => map?.setView([41.9981, 21.4254], 13)}
+              className="w-12 h-12 flex items-center justify-center text-green-600 bg-green-50 hover:bg-green-100 transition-colors"
+            >
               <FontAwesomeIcon icon={faLocationCrosshairs} />
             </button>
           </div>
@@ -95,31 +276,30 @@ export default function MapOverviewPage() {
       </div>
 
       {/* Container Preview Sheet */}
-      {showPreview && (
+      {showPreview && selectedContainer && (
         <div className="absolute bottom-6 right-6 lg:right-8 z-30 pointer-events-auto w-full max-w-sm">
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col">
-            <div className="h-32 bg-gray-200 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
-              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Location photo</div>
-              <button onClick={() => setShowPreview(false)} className="absolute top-3 right-3 z-20 w-8 h-8 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full text-white flex items-center justify-center transition-colors">
-                <FontAwesomeIcon icon={faXmark} className="text-sm" />
-              </button>
-              <div className="absolute bottom-3 left-4 z-20 flex items-center gap-2">
-                <span className="bg-yellow-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
-                  ⚠ Requires Pickup Soon
-                </span>
-              </div>
-            </div>
-
             <div className="p-5">
+              <div className="flex justify-between items-start mb-4">
+                <span className="bg-yellow-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+                  ⚠ {previewBadge(selectedContainer.fillLevel)}
+                </span>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 flex items-center justify-center transition-colors"
+                >
+                  <FontAwesomeIcon icon={faXmark} className="text-sm" />
+                </button>
+              </div>
+
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-bold text-gray-900">Container C-1042</h3>
-                    <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100">Recycling</span>
+                    <h3 className="text-lg font-bold text-gray-900">{selectedContainer.name}</h3>
+                    <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100 capitalize">{selectedContainer.wasteType}</span>
                   </div>
                   <p className="text-sm text-gray-500 flex items-center gap-1.5">
-                    <FontAwesomeIcon icon={faLocationCrosshairs} className="text-gray-400" /> Blvd. Partizanski Odredi 14
+                    <FontAwesomeIcon icon={faLocationCrosshairs} className="text-gray-400" /> {selectedContainer.address}
                   </p>
                 </div>
               </div>
@@ -127,12 +307,12 @@ export default function MapOverviewPage() {
               <div className="mb-5">
                 <div className="flex justify-between items-end mb-2">
                   <span className="text-sm font-semibold text-gray-700">Fill Level</span>
-                  <span className="text-lg font-bold text-yellow-600">75%</span>
+                  <span className="text-lg font-bold text-yellow-600">{selectedContainer.fillLevel}%</span>
                 </div>
                 <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-yellow-500 rounded-full transition-all duration-1000" style={{ width: '75%' }} />
+                  <div className="h-full bg-yellow-500 rounded-full transition-all duration-1000" style={{ width: `${selectedContainer.fillLevel}%` }} />
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-right">Last updated: 10 mins ago</p>
+                <p className="text-xs text-gray-500 mt-2 text-right">Last pickup: {selectedContainer.lastPickup ? new Date(selectedContainer.lastPickup).toLocaleString() : '—'}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-6">
@@ -143,13 +323,13 @@ export default function MapOverviewPage() {
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                   <div className="text-gray-400 mb-1 text-sm"><FontAwesomeIcon icon={faBatteryThreeQuarters} /></div>
-                  <span className="block text-sm font-semibold text-gray-900">82%</span>
+                  <span className="block text-sm font-semibold text-gray-900">{selectedContainer.batteryLevel}%</span>
                   <span className="block text-[10px] text-gray-500 uppercase">Sensor Battery</span>
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => navigate('/containers/C-1042')} className="flex-1 bg-white border border-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm">
+                <button onClick={() => navigate(`/containers/${selectedContainer.id}`)} className="flex-1 bg-white border border-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm">
                   Full Details
                 </button>
                 <button className="flex-[2] bg-green-600 text-white font-semibold py-2.5 rounded-xl hover:bg-green-700 transition-colors shadow-md shadow-green-500/20 text-sm flex items-center justify-center gap-2">
