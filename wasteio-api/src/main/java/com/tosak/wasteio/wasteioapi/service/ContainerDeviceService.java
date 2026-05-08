@@ -1,11 +1,13 @@
 package com.tosak.wasteio.wasteioapi.service;
 
 import com.tosak.wasteio.wasteioapi.dto.ContainerDTO;
+import com.tosak.wasteio.wasteioapi.dto.FillSnapshotDTO;
 import com.tosak.wasteio.wasteioapi.model.Container;
 import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
 import com.tosak.wasteio.wasteioapi.model.Pickup;
 import com.tosak.wasteio.wasteioapi.model.Telemetry;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
+import com.tosak.wasteio.wasteioapi.repository.DailyFillSnapshotRepository;
 import com.tosak.wasteio.wasteioapi.repository.PickupRepository;
 import com.tosak.wasteio.wasteioapi.repository.TelemetryRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,16 +29,19 @@ public class ContainerDeviceService {
     private final ContainerRepository repository;
     private final TelemetryRepository telemetryRepository;
     private final PickupRepository pickupRepository;
+    private final DailyFillSnapshotRepository snapshotRepository;
     private final MessageChannel mqttOutboundChannel;
 
     public ContainerDeviceService(
             ContainerRepository repository,
             TelemetryRepository telemetryRepository,
             PickupRepository pickupRepository,
+            DailyFillSnapshotRepository snapshotRepository,
             @Qualifier("mqttOutboundChannel") MessageChannel mqttOutboundChannel) {
         this.repository = repository;
         this.telemetryRepository = telemetryRepository;
         this.pickupRepository = pickupRepository;
+        this.snapshotRepository = snapshotRepository;
         this.mqttOutboundChannel = mqttOutboundChannel;
     }
 
@@ -108,6 +114,16 @@ public class ContainerDeviceService {
         }
 
         return toDTO(container);
+    }
+
+    public List<FillSnapshotDTO> getFillHistory(String containerId, int days) {
+        LocalDate end = LocalDate.now();
+        LocalDate start = end.minusDays(days - 1L);
+        return snapshotRepository
+                .findByContainerIdAndSnapshotDateBetweenOrderBySnapshotDateAsc(containerId, start, end)
+                .stream()
+                .map(s -> new FillSnapshotDTO(s.getSnapshotDate().toString(), s.getFillLevel()))
+                .toList();
     }
 
     private Container fromDTO(ContainerDTO dto) {

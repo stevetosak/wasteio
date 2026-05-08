@@ -1,10 +1,10 @@
 package com.tosak.wasteio.wasteioapi.controller;
 
 import com.tosak.wasteio.wasteioapi.dto.ContainerDTO;
+import com.tosak.wasteio.wasteioapi.dto.FillSnapshotDTO;
 import com.tosak.wasteio.wasteioapi.service.ContainerDeviceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -49,6 +49,13 @@ public class ContainerDeviceController {
     @PostMapping("/{id}/pickup")
     public ResponseEntity<ContainerDTO> requestPickup(@PathVariable String id) {
         return ResponseEntity.ok(service.requestPickup(id));
+    }
+
+    @GetMapping("/{id}/fill-history")
+    public ResponseEntity<List<FillSnapshotDTO>> getFillHistory(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "7") int days) {
+        return ResponseEntity.ok(service.getFillHistory(id, days));
     }
 
     @ExceptionHandler(RuntimeException.class)

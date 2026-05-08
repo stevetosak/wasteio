@@ -108,3 +108,12 @@ export async function getContainerByIdApi(id: string): Promise<Container> {
   const raw = await req<ApiContainer>(`/devices/${id}`)
   return fromApi(raw)
 }
+
+export interface FillSnapshot {
+  date: string
+  fillLevel: number
+}
+
+export async function fetchFillHistory(id: string, days: number): Promise<FillSnapshot[]> {
+  return req<FillSnapshot[]>(`/devices/${id}/fill-history?days=${days}`)
+}
