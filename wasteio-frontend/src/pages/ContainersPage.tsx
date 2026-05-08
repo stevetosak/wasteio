@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faPlus, faMagnifyingGlass, faBox, faCircleCheck,
-  faTriangleExclamation, faBan, faToggleOn, faToggleOff,
+  faTriangleExclamation, faBan, faToggleOn, faToggleOff, faSliders,
 } from '@fortawesome/free-solid-svg-icons'
 import { useContainers } from '../hooks/useContainers'
 import ContainerTable from '../components/containers/ContainerTable'
 import ContainerFormModal from '../components/containers/ContainerFormModal'
 import DeleteConfirmModal from '../components/containers/DeleteConfirmModal'
+import SimulatorPanel from '../components/containers/SimulatorPanel'
 import type { Container, ContainerFormData, ContainerStatus, WasteType } from '../types/container'
 
 interface StatCardProps {
@@ -39,6 +40,7 @@ export default function ContainersPage() {
   const [filterStatus, setFilterStatus] = useState<ContainerStatus | 'all'>('all')
   const [filterType, setFilterType] = useState<WasteType | 'all'>('all')
 
+  const [showSimulator, setShowSimulator] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editTarget, setEditTarget] = useState<Container | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Container | null>(null)
@@ -76,7 +78,7 @@ export default function ContainersPage() {
   }
 
   return (
-    <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
+    <div className={`flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto transition-all duration-300 ${showSimulator ? 'pb-52' : 'pb-11'}`}>
       {/* Header */}
       <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
         <div>
@@ -109,6 +111,17 @@ export default function ContainersPage() {
               className="w-full bg-transparent border-none focus:outline-none focus:ring-0 px-3 py-1 text-sm text-gray-900 placeholder-gray-400"
             />
           </div>
+          <button
+            onClick={() => setShowSimulator(s => !s)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+              showSimulator
+                ? 'bg-gray-900 border-gray-900 text-white'
+                : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <FontAwesomeIcon icon={faSliders} />
+            Simulator
+          </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="px-5 py-2.5 bg-gray-900 text-white rounded-xl shadow-md text-sm font-medium hover:bg-gray-800 transition-all flex items-center gap-2"
@@ -216,6 +229,8 @@ export default function ContainersPage() {
           loading={loading}
         />
       )}
+
+      <SimulatorPanel open={showSimulator} onToggle={() => setShowSimulator(s => !s)} />
     </div>
   )
 }

@@ -39,11 +39,6 @@ const fromApiStatus: Record<string, ContainerStatus> = {
   OFFLINE: 'offline',
 }
 
-const toApiStatus: Record<ContainerStatus, string> = {
-  active: 'ACTIVE',
-  maintenance: 'MAINTENANCE',
-  offline: 'OFFLINE',
-}
 
 function fromApi(raw: ApiContainer): Container {
   return {
