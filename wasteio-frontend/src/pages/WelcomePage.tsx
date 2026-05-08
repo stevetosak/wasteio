@@ -60,7 +60,7 @@ export default function WelcomePage() {
               Sign In to Dashboard
               <FontAwesomeIcon icon={faArrowRight} className="group-hover:translate-x-1 transition-transform" />
             </button>
-            <button className="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+            <button   onClick={() => navigate('/learn-more')} className="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
               <FontAwesomeIcon icon={faCircleQuestion} className="text-gray-400" />
               Learn More
             </button>

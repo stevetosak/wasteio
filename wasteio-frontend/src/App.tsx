@@ -16,6 +16,8 @@ import AlertsPage from './pages/AlertsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import AdminPage from './pages/AdminPage'
+import NotFoundPage from './pages/NotFoundPage'
+import LearnMorePage from './pages/LearnMorePage'
 
 export default function App() {
   return (
@@ -26,6 +28,7 @@ export default function App() {
           <Route path="/" element={<WelcomePage />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/learn-more" element={<LearnMorePage />} />
           <Route path="/jurisdiction" element={<SelectJurisdictionPage />} />
 
           {/* Protected dashboard */}
@@ -49,7 +52,7 @@ export default function App() {
             </Route>
           </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
