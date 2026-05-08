@@ -2,3 +2,4 @@
 container-device-simulator/mosquitto/data/
 container-device-simulator/mosquitto/log/ 
 container-device-simulator/pkg/mod/*
+CLAUDE.md

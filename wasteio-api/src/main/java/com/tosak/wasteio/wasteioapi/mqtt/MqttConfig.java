@@ -27,6 +27,9 @@ public class MqttConfig {
     @Value("${mqtt.topic.telemetry}")
     private String telemetryTopic;
 
+    @Value("${mqtt.topic.events}")
+    private String eventsTopic;
+
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
@@ -56,6 +59,27 @@ public class MqttConfig {
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(1);
         adapter.setOutputChannel(mqttInputChannel);
+        return adapter;
+    }
+
+    @Bean
+    public MessageChannel mqttEventsChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MqttPahoMessageDrivenChannelAdapter inboundEventsAdapter(
+            MqttPahoClientFactory mqttClientFactory,
+            MessageChannel mqttEventsChannel) {
+
+        MqttPahoMessageDrivenChannelAdapter adapter =
+                new MqttPahoMessageDrivenChannelAdapter(
+                        clientId + "-events", mqttClientFactory, eventsTopic);
+
+        adapter.setCompletionTimeout(5000);
+        adapter.setConverter(new DefaultPahoMessageConverter());
+        adapter.setQos(1);
+        adapter.setOutputChannel(mqttEventsChannel);
         return adapter;
     }
 
