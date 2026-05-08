@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -10,6 +10,14 @@ import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 import { useContainers } from '../hooks/useContainers'
 import type { Container } from '../types/container'
+
+type ApiContainer = {
+  id: string
+  name: string
+  latitude: number
+  longitude: number
+  latestFillLevel: number
+}
 
 function markerColor(fillLevel: number): string {
   if (fillLevel > 90) return '#ef4444'
@@ -26,14 +34,60 @@ function previewBadge(fillLevel: number): string {
 export default function MapOverviewPage() {
   const navigate = useNavigate()
   const { containers } = useContainers()
+  const [apiContainers, setApiContainers] = useState<Container[]>([])
+  const [usingApiData, setUsingApiData] = useState(false)
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [showPreview, setShowPreview] = useState(true)
   const [search, setSearch] = useState('')
-  const [selectedContainerId, setSelectedContainerId] = useState<string>(containers[0]?.id ?? '')
+  const [selectedContainerId, setSelectedContainerId] = useState<string>('')
+
+  useEffect(() => {
+    async function loadContainers() {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch('http://localhost:8080/api/devices', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!response.ok) {
+          throw new Error(`Failed with status ${response.status}`)
+        }
+
+        const data: ApiContainer[] = await response.json()
+        if (!Array.isArray(data) || data.length === 0) {
+          setUsingApiData(false)
+          setApiContainers([])
+          return
+        }
+
+        const mapped = data.map(device => ({
+          id: device.id,
+          name: device.name || `Container ${device.id}`,
+          address: `Lat ${device.latitude.toFixed(4)}, Lng ${device.longitude.toFixed(4)}`,
+          wasteType: 'general' as const,
+          capacityLiters: 1100,
+          fillLevel: Math.max(0, Math.min(100, Math.round(device.latestFillLevel))),
+          batteryLevel: 100,
+          status: 'active' as const,
+          lastPickup: new Date().toISOString(),
+          location: { lat: device.latitude, lng: device.longitude },
+        }))
+
+        setApiContainers(mapped)
+        setUsingApiData(true)
+      } catch {
+        setUsingApiData(false)
+        setApiContainers([])
+      }
+    }
+
+    loadContainers()
+  }, [])
+
+  const sourceContainers = usingApiData ? apiContainers : containers
 
   const filteredContainers = useMemo(
     () =>
-      containers.filter(container => {
+      sourceContainers.filter(container => {
         const query = search.trim().toLowerCase()
         if (!query) return true
         return (
@@ -42,8 +96,19 @@ export default function MapOverviewPage() {
           container.address.toLowerCase().includes(query)
         )
       }),
-    [containers, search]
+    [sourceContainers, search]
   )
+
+  useEffect(() => {
+    if (!filteredContainers.length) {
+      setSelectedContainerId('')
+      return
+    }
+
+    if (!selectedContainerId || !filteredContainers.some(c => c.id === selectedContainerId)) {
+      setSelectedContainerId(filteredContainers[0].id)
+    }
+  }, [filteredContainers, selectedContainerId])
 
   const selectedContainer: Container | undefined =
     filteredContainers.find(c => c.id === selectedContainerId) ?? filteredContainers[0]
@@ -108,6 +173,9 @@ export default function MapOverviewPage() {
             <button className="px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-sm font-medium text-gray-700 hover:border-green-300 hover:bg-green-50 transition-all flex items-center gap-2">
               <FontAwesomeIcon icon={faFilter} className="text-gray-400" /> All Filters
             </button>
+            <span className="px-3 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-xs font-semibold text-gray-600">
+              Source: {usingApiData ? 'API' : 'Local Mock'}
+            </span>
             <div className="h-6 w-px bg-gray-300 self-center mx-1" />
             <button className="px-4 py-2 bg-red-50 border border-red-200 rounded-xl shadow-sm text-sm font-medium text-red-700 hover:bg-red-100 transition-all flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-red-500" /> Critical (12)
