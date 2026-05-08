@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faPlus, faMagnifyingGlass, faBox, faCircleCheck,
-  faTriangleExclamation, faBan,
+  faTriangleExclamation, faBan, faToggleOn, faToggleOff, faSliders,
 } from '@fortawesome/free-solid-svg-icons'
 import { useContainers } from '../hooks/useContainers'
 import ContainerTable from '../components/containers/ContainerTable'
 import ContainerFormModal from '../components/containers/ContainerFormModal'
 import DeleteConfirmModal from '../components/containers/DeleteConfirmModal'
+import SimulatorPanel from '../components/containers/SimulatorPanel'
 import type { Container, ContainerFormData, ContainerStatus, WasteType } from '../types/container'
 
 interface StatCardProps {
@@ -33,19 +34,20 @@ function StatCard({ label, value, icon, iconClass }: StatCardProps) {
 }
 
 export default function ContainersPage() {
-  const { containers, loading, createContainer, updateContainer, deleteContainer } = useContainers()
+  const { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer } = useContainers()
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<ContainerStatus | 'all'>('all')
   const [filterType, setFilterType] = useState<WasteType | 'all'>('all')
 
+  const [showSimulator, setShowSimulator] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editTarget, setEditTarget] = useState<Container | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Container | null>(null)
 
   const filtered = useMemo(() => containers.filter(c => {
     const q = search.toLowerCase()
-    const matchesSearch = !q || c.id.toLowerCase().includes(q) || c.address.toLowerCase().includes(q)
+    const matchesSearch = !q || c.id.toLowerCase().includes(q) || c.address?.toLowerCase().includes(q)
     const matchesStatus = filterStatus === 'all' || c.status === filterStatus
     const matchesType = filterType === 'all' || c.wasteType === filterType
     return matchesSearch && matchesStatus && matchesType
@@ -76,7 +78,7 @@ export default function ContainersPage() {
   }
 
   return (
-    <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
+    <div className={`flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto transition-all duration-300 ${showSimulator ? 'pb-80' : 'pb-11'}`}>
       {/* Header */}
       <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
         <div>
@@ -84,6 +86,19 @@ export default function ContainersPage() {
           <p className="text-sm text-gray-500 mt-0.5">{containers.length} containers in this jurisdiction</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Demo / Live toggle */}
+          <button
+            onClick={toggleDemo}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+              isDemo
+                ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+            }`}
+          >
+            <FontAwesomeIcon icon={isDemo ? faToggleOff : faToggleOn} className="text-sm" />
+            {isDemo ? 'Demo' : 'Live'}
+          </button>
+
           <div className="relative bg-gray-50 rounded-xl flex items-center p-2 border border-gray-200 w-64 hidden md:flex">
             <div className="pl-2 text-gray-400">
               <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -97,6 +112,17 @@ export default function ContainersPage() {
             />
           </div>
           <button
+            onClick={() => setShowSimulator(s => !s)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+              showSimulator
+                ? 'bg-gray-900 border-gray-900 text-white'
+                : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <FontAwesomeIcon icon={faSliders} />
+            Simulator
+          </button>
+          <button
             onClick={() => setShowCreateModal(true)}
             className="px-5 py-2.5 bg-gray-900 text-white rounded-xl shadow-md text-sm font-medium hover:bg-gray-800 transition-all flex items-center gap-2"
           >
@@ -106,6 +132,14 @@ export default function ContainersPage() {
       </header>
 
       <div className="px-4 lg:px-6 flex flex-col gap-6 pb-8">
+        {/* API error banner */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm text-red-700">
+            <FontAwesomeIcon icon={faTriangleExclamation} />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Total Containers"   value={stats.total}    icon={faBox}                iconClass="bg-gray-100 text-gray-600" />
@@ -171,6 +205,7 @@ export default function ContainersPage() {
 
       {showCreateModal && (
         <ContainerFormModal
+          key="create"
           container={null}
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreate}
@@ -179,6 +214,7 @@ export default function ContainersPage() {
       )}
       {editTarget && (
         <ContainerFormModal
+          key={editTarget.id}
           container={editTarget}
           onClose={() => setEditTarget(null)}
           onSubmit={handleUpdate}
@@ -193,6 +229,8 @@ export default function ContainersPage() {
           loading={loading}
         />
       )}
+
+      <SimulatorPanel open={showSimulator} onToggle={() => setShowSimulator(s => !s)} containers={containers} onPickup={refreshContainer} />
     </div>
   )
 }

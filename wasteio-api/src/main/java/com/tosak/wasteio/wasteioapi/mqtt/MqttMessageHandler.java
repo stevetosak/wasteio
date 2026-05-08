@@ -1,11 +1,13 @@
 package com.tosak.wasteio.wasteioapi.mqtt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tosak.wasteio.wasteioapi.dto.TelemetryEventDTO;
 import com.tosak.wasteio.wasteioapi.model.Pickup;
 import com.tosak.wasteio.wasteioapi.model.Telemetry;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import com.tosak.wasteio.wasteioapi.repository.PickupRepository;
 import com.tosak.wasteio.wasteioapi.repository.TelemetryRepository;
+import com.tosak.wasteio.wasteioapi.sse.TelemetryBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.integration.annotation.ServiceActivator;
@@ -21,7 +23,7 @@ public class MqttMessageHandler {
     private final ContainerRepository containerRepository;
     private final TelemetryRepository telemetryRepository;
     private final PickupRepository pickupRepository;
-    
+    private final TelemetryBroadcaster broadcaster;
     private final ObjectMapper objectMapper;
 
     @ServiceActivator(inputChannel = "mqttInputChannel")
@@ -42,7 +44,12 @@ public class MqttMessageHandler {
                         container.setLatestFillLevel(telemetry.getFillLevel());
 
                         containerRepository.save(container);
-                        
+                        broadcaster.broadcast(new TelemetryEventDTO(
+                                telemetry.getContainerId(),
+                                telemetry.getFillLevel(),
+                                telemetry.getBatteryLevel()
+                        ));
+
                         telemetryRepository.save(
                                 new Telemetry(container,
                                         telemetry.getFillLevel(),

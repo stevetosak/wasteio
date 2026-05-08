@@ -15,10 +15,11 @@ interface Props {
   onDelete: (container: Container) => void
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-  })
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 function BatteryIcon({ level }: { level: number }) {
@@ -89,10 +90,10 @@ export default function ContainerTable({ containers, onEdit, onDelete }: Props) 
                 <span className="text-gray-700 block truncate">{container.address}</span>
               </td>
               <td className="px-4 py-3.5 hidden md:table-cell">
-                <WasteTypeBadge type={container.wasteType} />
+                <WasteTypeBadge type={container?.wasteType} />
               </td>
               <td className="px-4 py-3.5 hidden lg:table-cell">
-                <span className="text-gray-700">{container.capacityLiters.toLocaleString()} L</span>
+                <span className="text-gray-700">{container.capacityLiters != null ? `${container.capacityLiters.toLocaleString()} L` : '—'}</span>
               </td>
               <td className="px-4 py-3.5">
                 <FillLevelBar level={container.fillLevel} />

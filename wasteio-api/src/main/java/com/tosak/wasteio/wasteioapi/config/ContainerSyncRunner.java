@@ -3,6 +3,7 @@ package com.tosak.wasteio.wasteioapi.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tosak.wasteio.wasteioapi.model.Container;
+import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -55,8 +56,10 @@ public class ContainerSyncRunner implements ApplicationRunner {
                         container.setName(toDisplayName(device.getContainerId()));
                         container.setLatitude(device.getLocation().getLat());
                         container.setLongitude(device.getLocation().getLng());
+                        container.setDeviceStatus(DeviceStatus.ACTIVE);
+                        // wasteType, address, capacity are set by operators via the API
                         containerRepository.save(container);
-                        log.info("Inserted new container: {}", device.getContainerId());
+                        log.info("Registered new container: {}", device.getContainerId());
                     }
             );
         }
