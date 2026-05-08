@@ -20,9 +20,10 @@ public class AuthController {
     public UserResponse register(@RequestParam String token,
                          @RequestParam String name,
                          @RequestParam String email,
-                         @RequestParam String password) {
-        User user = authService.register(token, name, email, password);
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole());
+                         @RequestParam String password,
+                         @RequestParam(required = false) String phoneNumber) {
+        User user = authService.register(token, name, email, password, phoneNumber);
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getPhoneNumber(), user.getRole());
     }
 
     @PostMapping("/login")

@@ -18,7 +18,10 @@ public class User {
     private String name;
 
     private String email;
-
+    
+    @Column(name = "phone_number", unique = true)
+    private String phoneNumber;
+    
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 

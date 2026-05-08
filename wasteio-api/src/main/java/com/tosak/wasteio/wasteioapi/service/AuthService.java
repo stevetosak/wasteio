@@ -45,7 +45,7 @@ public class AuthService {
 
     // REGISTER EMPLOYEE
     @Transactional
-    public User register(String token, String name, String email, String password) {
+    public User register(String token, String name, String email, String password, String phoneNumber) {
 
         RegistrationToken regToken = tokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
@@ -57,6 +57,7 @@ public class AuthService {
         User user = new User();
         user.setName(name);
         user.setEmail(email);
+        user.setPhoneNumber(phoneNumber);
         user.setPassword(encoder.encode(password));
         user.setRole(Role.EMPLOYEE);
 
