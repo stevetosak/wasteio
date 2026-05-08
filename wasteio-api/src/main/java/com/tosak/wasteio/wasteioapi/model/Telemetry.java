@@ -25,7 +25,7 @@ public class Telemetry {
     private Long id;
     
     @ManyToOne
-    @JoinColumn(name = "container_id", nullable = false, unique = true)
+    @JoinColumn(name = "container_id", nullable = false)
     private Container container;
     
     @Column(name = "fill_level", nullable = false )

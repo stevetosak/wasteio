@@ -10,5 +10,9 @@
   {
     "containerId": "container-003",
     "location": { "lat": 42.0012, "lng": 21.4189 }
+  },
+  {
+    "containerId": "container-004",
+    "location": { "lat": 42.02, "lng": 21.59 }
   }
 ]

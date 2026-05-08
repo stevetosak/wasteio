@@ -21,11 +21,10 @@ CREATE TABLE telemetry (
 
 -- Pickup events table
 CREATE TABLE pickups (
-                         id SERIAL PRIMARY KEY,
+                         id BIGSERIAL PRIMARY KEY,
                          container_id VARCHAR(50) NOT NULL REFERENCES containers(container_id) ON DELETE CASCADE,
                          pickup_time TIMESTAMP NOT NULL,
-                         fill_level_before DOUBLE PRECISION,
-                         recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                         fill_level_before DOUBLE PRECISION
 );
 
 -- Indexes for performance
