@@ -5,6 +5,7 @@ import {
   createContainerApi,
   updateContainerApi,
   deleteContainerApi,
+  getContainerByIdApi,
 } from '../lib/containerApi'
 
 const INITIAL_CONTAINERS: Container[] = [
@@ -246,5 +247,15 @@ export function useContainers() {
     }
   }
 
-  return { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer }
+  async function refreshContainer(id: string): Promise<void> {
+    if (isDemo) return
+    try {
+      const updated = await getContainerByIdApi(id)
+      setLiveContainers(prev => prev.map(c => c.id === id ? updated : c))
+    } catch {
+      // silent — SSE will catch up on next telemetry tick
+    }
+  }
+
+  return { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer }
 }

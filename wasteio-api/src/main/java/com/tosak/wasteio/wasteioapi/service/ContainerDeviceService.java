@@ -3,6 +3,7 @@ package com.tosak.wasteio.wasteioapi.service;
 import com.tosak.wasteio.wasteioapi.dto.ContainerDTO;
 import com.tosak.wasteio.wasteioapi.model.Container;
 import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
+import com.tosak.wasteio.wasteioapi.model.Pickup;
 import com.tosak.wasteio.wasteioapi.model.Telemetry;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import com.tosak.wasteio.wasteioapi.repository.PickupRepository;
@@ -74,10 +75,16 @@ public class ContainerDeviceService {
         return toDTO(repository.save(container));
     }
 
-    public void requestPickup(String containerId) {
-        if (!repository.existsById(containerId)) {
-            throw new RuntimeException("Device not found: " + containerId);
-        }
+    public ContainerDTO requestPickup(String containerId) {
+        Container container = repository.findById(containerId)
+                .orElseThrow(() -> new RuntimeException("Device not found: " + containerId));
+
+        Pickup pickup = new Pickup();
+        pickup.setContainer(container);
+        pickup.setPickup_time(java.time.LocalDateTime.now());
+        pickup.setFill_level_before(container.getLatestFillLevel());
+        pickupRepository.save(pickup);
+
         try {
             String topic = "waste/containers/" + containerId + "/commands";
             Message<?> message = MessageBuilder.withPayload("pickup")
@@ -85,18 +92,18 @@ public class ContainerDeviceService {
                     .build();
 
             boolean sent = mqttOutboundChannel.send(message);
-
             if (!sent) {
                 log.error("Pickup command was not accepted for container: {}", containerId);
                 throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                         "Failed to send pickup command - message rejected by channel");
             }
-
             log.info("Pickup command sent for container: {}", containerId);
         } catch (Exception e) {
             log.error("Failed to send pickup command for container: {}", containerId, e);
             throw new RuntimeException("Failed to send pickup command", e);
         }
+
+        return toDTO(container);
     }
 
     private Container fromDTO(ContainerDTO dto) {

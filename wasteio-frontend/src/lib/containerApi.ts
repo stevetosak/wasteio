@@ -98,3 +98,8 @@ export async function updateContainerApi(id: string, data: ContainerFormData): P
 export async function deleteContainerApi(id: string): Promise<void> {
   await req<void>(`/devices/${id}`, { method: 'DELETE' })
 }
+
+export async function getContainerByIdApi(id: string): Promise<Container> {
+  const raw = await req<ApiContainer>(`/devices/${id}`)
+  return fromApi(raw)
+}

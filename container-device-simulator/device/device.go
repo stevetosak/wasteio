@@ -134,6 +134,15 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 	telemetryTopic := fmt.Sprintf("waste/containers/%s/telemetry", d.cfg.ContainerID)
 
 	snap := rtCfg.Snapshot()
+
+	// Random offset so devices don't all fire their tickers at the same time.
+	// Each device sleeps a random fraction of its fill interval before starting.
+	select {
+	case <-time.After(time.Duration(rand.Int63n(int64(snap.FillInterval)))):
+	case <-ctx.Done():
+		return
+	}
+
 	fillInterval := snap.FillInterval
 	batteryInterval := snap.BatteryInterval
 	telemetryInterval := snap.TelemetryInterval

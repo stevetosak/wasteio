@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Slf4j
@@ -32,14 +34,16 @@ public class TelemetryBroadcaster {
     }
 
     public void broadcast(TelemetryEventDTO event) {
-        emitters.removeIf(emitter -> {
+        List<SseEmitter> dead = new ArrayList<>();
+        for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().data(event));
-                return false; // keep this emitter
             } catch (Exception e) {
-                // Client disconnected mid-send — remove it
-                return true;
+                dead.add(emitter);
             }
-        });
+        }
+        if (!dead.isEmpty()) {
+            emitters.removeAll(dead);
+        }
     }
 }

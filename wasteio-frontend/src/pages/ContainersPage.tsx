@@ -34,7 +34,7 @@ function StatCard({ label, value, icon, iconClass }: StatCardProps) {
 }
 
 export default function ContainersPage() {
-  const { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer } = useContainers()
+  const { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer } = useContainers()
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<ContainerStatus | 'all'>('all')
@@ -78,7 +78,7 @@ export default function ContainersPage() {
   }
 
   return (
-    <div className={`flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto transition-all duration-300 ${showSimulator ? 'pb-52' : 'pb-11'}`}>
+    <div className={`flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto transition-all duration-300 ${showSimulator ? 'pb-80' : 'pb-11'}`}>
       {/* Header */}
       <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
         <div>
@@ -230,7 +230,7 @@ export default function ContainersPage() {
         />
       )}
 
-      <SimulatorPanel open={showSimulator} onToggle={() => setShowSimulator(s => !s)} />
+      <SimulatorPanel open={showSimulator} onToggle={() => setShowSimulator(s => !s)} containers={containers} onPickup={refreshContainer} />
     </div>
   )
 }

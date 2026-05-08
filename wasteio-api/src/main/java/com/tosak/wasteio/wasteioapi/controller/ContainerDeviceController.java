@@ -46,9 +46,8 @@ public class ContainerDeviceController {
     }
 
     @PostMapping("/{id}/pickup")
-    public ResponseEntity<String> requestPickup(@PathVariable String id) {
-        service.requestPickup(id);
-        return ResponseEntity.ok("Pickup requested for container: " + id);
+    public ResponseEntity<ContainerDTO> requestPickup(@PathVariable String id) {
+        return ResponseEntity.ok(service.requestPickup(id));
     }
 
     @ExceptionHandler(RuntimeException.class)
