@@ -1,7 +1,9 @@
 package com.tosak.wasteio.wasteioapi.service;
 
+import com.tosak.wasteio.wasteioapi.dto.LoginResponse;
 import com.tosak.wasteio.wasteioapi.model.*;
 import com.tosak.wasteio.wasteioapi.repository.*;
+import com.tosak.wasteio.wasteioapi.security.JwtTokenProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -12,11 +14,13 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final TokenRepository tokenRepository;
+    private final JwtTokenProvider jwtTokenProvider;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    public AuthService(UserRepository userRepository, TokenRepository tokenRepository) {
+    public AuthService(UserRepository userRepository, TokenRepository tokenRepository, JwtTokenProvider jwtTokenProvider) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     // ADMIN -> generate token
@@ -56,14 +60,22 @@ public class AuthService {
     }
 
     // LOGIN
-    public User login(String email, String password) {
+    public LoginResponse login(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (!encoder.matches(password, user.getPassword())) {
+                .orElseThrow(() -> new RuntimeException("User Not Found"));
+        
+        if (!encoder.matches(password, user.getPassword())){
             throw new RuntimeException("Wrong password");
         }
-
-        return user;
+        
+        String jwtToken = jwtTokenProvider.generateToken(email);
+        
+        return new LoginResponse(
+                jwtToken,
+                user.getEmail(),
+                user.getName(),
+                user.getRole().toString()
+        );
+        
     }
 }

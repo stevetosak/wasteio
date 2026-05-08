@@ -1,0 +1,30 @@
+### Step 1: Register new employee with the test token
+POST http://localhost:8080/auth/register
+Content-Type: application/x-www-form-urlencoded
+
+token=test-token-12345&name=John Doe&email=john@example.com&password=password123
+
+###
+
+### Step 2: Login with the newly registered user // PO LOGIRANJE KOPIRAJ GO TOKENOT OD RESPONSE
+POST http://localhost:8080/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+email=john@example.com&password=password123
+
+###
+
+### Step 3: Access protected endpoint WITHOUT token (should fail 401)
+GET http://localhost:8080/api/devices
+
+###
+
+### Step 4: Access protected endpoint WITH valid token // POSLE BEARER OSTAVI 1 PRAZNO MESTO I KOPIRAJ GO TOKENOT OD STEP 2 
+GET http://localhost:8080/api/devices
+Authorization: Bearer <TOKEN_TUKA>
+
+###
+
+### Step 5: Access protected endpoint WITH invalid token (should fail 401)
+GET http://localhost:8080/api/devices
+Authorization: Bearer invalid-token-xyz
