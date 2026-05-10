@@ -17,7 +17,7 @@ export default function SignInPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState<{email?: string, password?: string}>({})
+  const [errors] = useState<{email?: string, password?: string}>({})
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
