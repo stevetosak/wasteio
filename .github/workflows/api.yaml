@@ -54,7 +54,7 @@ jobs:
     needs: build-push
     runs-on: ubuntu-22.04
     steps:
-      - uses: stevetosak/hetzner-cloud-infra/.github/actions/kustomize-deploy@main
+      - uses: stevetosak/hetzner-cloud-infra/.github/actions/kustomize-deploy@master
         with:
           infra-repo: stevetosak/${{ vars.INFRA_REPO_NAME }}
           infra-repo-token: ${{ secrets.INFRA_REPO_TOKEN }}
