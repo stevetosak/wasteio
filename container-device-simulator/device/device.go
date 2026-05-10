@@ -103,6 +103,21 @@ func (d *Device) buildPayload() ([]byte, error) {
 	return json.Marshal(t)
 }
 
+func (d *Device) publishTelemetry(topic string) {
+	payload, err := d.buildPayload()
+	if err != nil {
+		fmt.Printf("[%s] marshal error: %v\n", d.cfg.ContainerID, err)
+		return
+	}
+	token := d.client.Publish(topic, 0, false, payload)
+	token.Wait()
+	if token.Error() != nil {
+		fmt.Printf("[%s] publish error: %v\n", d.cfg.ContainerID, token.Error())
+		return
+	}
+	fmt.Printf("[%s] published: %s\n", d.cfg.ContainerID, payload)
+}
+
 func (d *Device) publishEvent(eventType string) {
 	topic := fmt.Sprintf("waste/containers/%s/events", d.cfg.ContainerID)
 	payload, err := json.Marshal(Event{
@@ -135,13 +150,19 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 
 	snap := rtCfg.Snapshot()
 
-	// Random offset so devices don't all fire their tickers at the same time.
-	// Each device sleeps a random fraction of its fill interval before starting.
+	// Publish current state immediately so the backend has data before the jitter delay.
+	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+	d.publishTelemetry(telemetryTopic)
+
+	// Random offset (1–3s) so devices don't all fire their tickers at the same time.
 	select {
-	case <-time.After(time.Duration(rand.Int63n(int64(snap.FillInterval)))):
+	case <-time.After(time.Duration(3+rand.Intn(6)) * time.Second):
 	case <-ctx.Done():
 		return
 	}
+
+
+	changes := rtCfg.Subscribe()
 
 	fillInterval := snap.FillInterval
 	batteryInterval := snap.BatteryInterval
@@ -154,8 +175,6 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 	defer batteryTicker.Stop()
 	defer telemetryTicker.Stop()
 
-	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.ContainerID, d.fillLevel)
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -167,6 +186,26 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 			d.fillLevel *= 0.15 + rand.Float64()*0.1
 			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.ContainerID, d.fillLevel)
 			d.publishEvent("emptied")
+
+		case <-changes:
+			snap = rtCfg.Snapshot()
+			if snap.FillInterval != fillInterval {
+				fillInterval = snap.FillInterval
+				fillTicker.Reset(fillInterval)
+			}
+			if snap.BatteryInterval != batteryInterval {
+				batteryInterval = snap.BatteryInterval
+				batteryTicker.Reset(batteryInterval)
+			}
+			if snap.TelemetryInterval != telemetryInterval {
+				telemetryInterval = snap.TelemetryInterval
+				// All devices receive this signal simultaneously, so a plain Reset would
+				// re-synchronize all 20 tickers. Use a random offset within the new interval
+				// so they spread back out. The tick handler always resets to the true interval,
+				// so the period self-corrects after this one jittered first fire.
+				jitter := time.Duration(rand.Int63n(int64(telemetryInterval)))
+				telemetryTicker.Reset(jitter + 1)
+			}
 
 		case <-fillTicker.C:
 			snap = rtCfg.Snapshot()
@@ -186,24 +225,13 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 
 		case <-telemetryTicker.C:
 			snap = rtCfg.Snapshot()
-			if snap.TelemetryInterval != telemetryInterval {
-				telemetryInterval = snap.TelemetryInterval
-				telemetryTicker.Reset(telemetryInterval)
-			}
-			payload, err := d.buildPayload()
-			if err != nil {
-				fmt.Printf("[%s] marshal error: %v\n", d.cfg.ContainerID, err)
-				continue
-			}
+			// Always reset to the current interval so the period self-corrects after a
+			// jittered reset from a config change.
+			telemetryInterval = snap.TelemetryInterval
+			telemetryTicker.Reset(telemetryInterval)
 			// QoS 0: fire and forget. Fine for telemetry — occasional loss is acceptable.
 			// retain=false: we don't want new subscribers to get a stale reading.
-			token := d.client.Publish(telemetryTopic, 0, false, payload)
-			token.Wait()
-			if token.Error() != nil {
-				fmt.Printf("[%s] publish error: %v\n", d.cfg.ContainerID, token.Error())
-				continue
-			}
-			fmt.Printf("[%s] published: %s\n", d.cfg.ContainerID, payload)
+			d.publishTelemetry(telemetryTopic)
 		}
 	}
 }

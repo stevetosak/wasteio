@@ -2,13 +2,12 @@ import { useState, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faPlus, faMagnifyingGlass, faBox, faCircleCheck,
-  faTriangleExclamation, faBan, faToggleOn, faToggleOff, faSliders,
+  faTriangleExclamation, faBan,
 } from '@fortawesome/free-solid-svg-icons'
 import { useContainers } from '../hooks/useContainers'
 import ContainerTable from '../components/containers/ContainerTable'
 import ContainerFormModal from '../components/containers/ContainerFormModal'
 import DeleteConfirmModal from '../components/containers/DeleteConfirmModal'
-import SimulatorPanel from '../components/containers/SimulatorPanel'
 import type { Container, ContainerFormData, ContainerStatus, WasteType } from '../types/container'
 
 interface StatCardProps {
@@ -34,13 +33,12 @@ function StatCard({ label, value, icon, iconClass }: StatCardProps) {
 }
 
 export default function ContainersPage() {
-  const { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer } = useContainers()
+  const { containers, loading, error, createContainer, updateContainer, deleteContainer } = useContainers()
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<ContainerStatus | 'all'>('all')
   const [filterType, setFilterType] = useState<WasteType | 'all'>('all')
 
-  const [showSimulator, setShowSimulator] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editTarget, setEditTarget] = useState<Container | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Container | null>(null)
@@ -78,7 +76,7 @@ export default function ContainersPage() {
   }
 
   return (
-    <div className={`flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto transition-all duration-300 ${showSimulator ? 'pb-80' : 'pb-11'}`}>
+    <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
       {/* Header */}
       <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
         <div>
@@ -86,19 +84,6 @@ export default function ContainersPage() {
           <p className="text-sm text-gray-500 mt-0.5">{containers.length} containers in this jurisdiction</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Demo / Live toggle */}
-          <button
-            onClick={toggleDemo}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
-              isDemo
-                ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
-                : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
-            }`}
-          >
-            <FontAwesomeIcon icon={isDemo ? faToggleOff : faToggleOn} className="text-sm" />
-            {isDemo ? 'Demo' : 'Live'}
-          </button>
-
           <div className="relative bg-gray-50 rounded-xl flex items-center p-2 border border-gray-200 w-64 hidden md:flex">
             <div className="pl-2 text-gray-400">
               <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -111,17 +96,6 @@ export default function ContainersPage() {
               className="w-full bg-transparent border-none focus:outline-none focus:ring-0 px-3 py-1 text-sm text-gray-900 placeholder-gray-400"
             />
           </div>
-          <button
-            onClick={() => setShowSimulator(s => !s)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
-              showSimulator
-                ? 'bg-gray-900 border-gray-900 text-white'
-                : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            <FontAwesomeIcon icon={faSliders} />
-            Simulator
-          </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="px-5 py-2.5 bg-gray-900 text-white rounded-xl shadow-md text-sm font-medium hover:bg-gray-800 transition-all flex items-center gap-2"
@@ -230,7 +204,6 @@ export default function ContainersPage() {
         />
       )}
 
-      <SimulatorPanel open={showSimulator} onToggle={() => setShowSimulator(s => !s)} containers={containers} onPickup={refreshContainer} />
     </div>
   )
 }
