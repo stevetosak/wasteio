@@ -5,7 +5,7 @@ import {
   faCircleQuestion, faTrafficLight, faTruck, faBuilding, faLayerGroup,
   faCity, faMap, faDownload, faTrashCan, faGlobe, faCloudArrowDown,
   faCircleInfo, faShieldHalved, faBell, faArrowRightFromBracket,
-  faUser, faSliders, faChevronDown, faFlask, faKey, faCheck, faSpinner,
+  faUser, faSliders, faChevronDown, faFlask, faKey, faCheck,
   faEye, faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../context/AuthContext'
