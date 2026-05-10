@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faTriangleExclamation, faRotateLeft, faTruck, faCheck, faBolt,
+  faTriangleExclamation, faRotateLeft, faTruck, faCheck, faBolt, faArrowsRotate,
 } from '@fortawesome/free-solid-svg-icons'
 import { useSimulatorConfig } from '../../hooks/useSimulatorConfig'
 import { triggerPickup } from '../../lib/simulatorApi'
@@ -92,8 +92,18 @@ function Field({ label, value, onChange, type = 'text', step }: FieldProps) {
 }
 
 
+function ConfigStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
+      <span className="text-xl font-bold text-gray-900">{value}</span>
+      {sub && <span className="text-xs text-gray-500">{sub}</span>}
+    </div>
+  )
+}
+
 export default function SimulatorPanel({ containers, onPickup }: Props) {
-  const { config, loading, error, load, update } = useSimulatorConfig()
+  const { config, loading, error, load, update, lastFetched } = useSimulatorConfig()
   const [draft, setDraft] = useState<SimulatorConfig | null>(null)
 
   const [selectedId, setSelectedId] = useState('')
@@ -173,8 +183,80 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
   const allDone = allPickupResult !== null
   const allSuccess = allDone && allPickupResult!.success === allPickupResult!.total
 
+  const appliedPreset = config
+    ? (PRESETS.find(p => p.config && JSON.stringify(p.config) === JSON.stringify(config))?.label ?? 'Custom')
+    : null
+
   return (
     <div className="flex flex-col gap-6">
+
+      {/* ── Applied Config ────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base font-bold text-gray-900">Applied Config</h2>
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-50 border border-green-100 text-green-700 text-xs font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Live
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            {lastFetched && (
+              <span className="text-xs text-gray-400">
+                Fetched at {lastFetched.toLocaleTimeString()}
+              </span>
+            )}
+            <button
+              onClick={load}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <FontAwesomeIcon icon={faArrowsRotate} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div className="p-6">
+          {error && !config ? (
+            <p className="text-sm text-red-600 flex items-center gap-2">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+              {error}
+            </p>
+          ) : !config ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : (
+            <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-3 gap-6">
+                <ConfigStat label="Fill Interval"      value={config.fillInterval}      sub="fill update cadence" />
+                <ConfigStat label="Battery Interval"   value={config.batteryInterval}   sub="drain update cadence" />
+                <ConfigStat label="Telemetry Interval" value={config.telemetryInterval} sub="publish cadence" />
+              </div>
+              <div className="border-t border-gray-100 pt-6 grid grid-cols-3 gap-6">
+                <ConfigStat
+                  label="Fill Rate"
+                  value={`${config.fillRateMin} – ${config.fillRateMax}%`}
+                  sub="per tick"
+                />
+                <ConfigStat
+                  label="Battery Drain"
+                  value={`${config.batteryDrainMin} – ${config.batteryDrainMax}%`}
+                  sub="per tick"
+                />
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Preset</span>
+                  <span className={`self-start mt-1 px-2.5 py-1 rounded-lg text-sm font-semibold ${
+                    appliedPreset === 'Custom'
+                      ? 'bg-gray-100 text-gray-600'
+                      : 'bg-gray-900 text-white'
+                  }`}>
+                    {appliedPreset}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ── Simulate Pickup ───────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
