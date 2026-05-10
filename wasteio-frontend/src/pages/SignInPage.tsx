@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faLeaf, faEnvelope, faLock, faEyeSlash, faEye, faRoute,
+  faRecycle, faEnvelope, faLock, faEyeSlash, faEye, faRoute,
 } from '@fortawesome/free-solid-svg-icons'
 import { faGoogle, faMicrosoft } from '@fortawesome/free-brands-svg-icons'
 import { useAuth } from '../context/AuthContext'
+import { Spinner } from '../components/ui/Spinner'
 
 export default function SignInPage() {
   const navigate = useNavigate()
@@ -41,9 +42,9 @@ export default function SignInPage() {
           <header className="mb-12">
             <button onClick={() => navigate('/')} className="inline-flex items-center gap-3 group">
               <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-500/30 group-hover:scale-105 transition-transform">
-                <FontAwesomeIcon icon={faLeaf} className="text-xl" />
+                <FontAwesomeIcon icon={faRecycle} className="text-xl" />
               </div>
-              <span className="text-2xl font-bold text-gray-900 tracking-tight">EcoSkopje</span>
+              <span className="text-2xl font-bold text-gray-900 tracking-tight">Wasteio</span>
             </button>
           </header>
 
@@ -72,7 +73,7 @@ export default function SignInPage() {
                     <FontAwesomeIcon icon={faEnvelope} />
                   </div>
                   <input
-                    type="email" id="email" placeholder="worker@ecoskopje.mk"
+                    type="email" id="email" placeholder="worker@wasteio.app"
                     value={email} onChange={e => setEmail(e.target.value)}
                     required
                     className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow bg-gray-50/50 hover:bg-white focus:bg-white"
@@ -113,7 +114,7 @@ export default function SignInPage() {
                 disabled={loading}
                 className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-sm text-sm font-semibold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? 'Signing in…' : 'Sign in'}
+                {loading ? <><Spinner size="sm" /> Signing in…</> : 'Sign in'}
               </button>
 
               <div className="relative py-4">
@@ -144,7 +145,7 @@ export default function SignInPage() {
           </div>
 
           <footer className="mt-12 pt-8 flex items-center justify-between text-sm text-gray-500">
-            <p>&copy; 2024 EcoSkopje</p>
+            <p>&copy; 2026 Wasteio</p>
             <div className="flex gap-4">
               <a href="#" className="hover:text-green-600 transition-colors">Terms</a>
               <a href="#" className="hover:text-green-600 transition-colors">Privacy</a>

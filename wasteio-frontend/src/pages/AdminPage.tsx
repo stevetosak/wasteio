@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faShieldHalved, faUserPlus, faLink, faCheck, faTrash,
-  faSpinner, faUserTie, faUser, faCircleCheck, faClock,
+  faUserTie, faUser, faCircleCheck, faClock,
 } from '@fortawesome/free-solid-svg-icons'
 import {
   generateInviteToken, fetchUsers, deleteUser, fetchTokens,
   type AdminUser, type AdminToken,
 } from '../lib/adminApi'
 import { useAuth } from '../context/AuthContext'
+import { Spinner } from '../components/ui/Spinner'
 
 const FRONTEND_BASE = window.location.origin
 
@@ -104,7 +105,7 @@ export default function AdminPage() {
               className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {generating
-                ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                ? <Spinner size="sm" />
                 : copiedId === 'new'
                   ? <FontAwesomeIcon icon={faCheck} className="text-green-400" />
                   : <FontAwesomeIcon icon={faUserPlus} />}
@@ -114,7 +115,7 @@ export default function AdminPage() {
 
           {loadingTokens ? (
             <div className="flex justify-center py-8">
-              <FontAwesomeIcon icon={faSpinner} className="text-gray-300 text-2xl animate-spin" />
+              <Spinner size="lg" />
             </div>
           ) : tokens.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No invitations yet</p>
@@ -163,7 +164,7 @@ export default function AdminPage() {
 
           {loadingUsers ? (
             <div className="flex justify-center py-8">
-              <FontAwesomeIcon icon={faSpinner} className="text-gray-300 text-2xl animate-spin" />
+              <Spinner size="lg" />
             </div>
           ) : (
             <div className="flex flex-col gap-2 overflow-y-auto max-h-[420px] pr-1">
@@ -187,7 +188,7 @@ export default function AdminPage() {
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
                     >
                       {deletingId === u.id
-                        ? <FontAwesomeIcon icon={faSpinner} className="text-xs animate-spin" />
+                        ? <Spinner size="xs" />
                         : <FontAwesomeIcon icon={faTrash} className="text-xs" />}
                     </button>
                   )}

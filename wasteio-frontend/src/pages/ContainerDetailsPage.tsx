@@ -4,12 +4,13 @@ import {
   faArrowLeft, faArrowUpRightFromSquare, faPlus,
   faLocationDot, faExpand, faLocationArrow, faArrowTrendUp,
   faBatteryThreeQuarters, faRoute, faFlag, faTriangleExclamation,
-  faCircleDot, faSpinner,
+  faCircleDot,
 } from '@fortawesome/free-solid-svg-icons'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import MapPlaceholder from '../components/ui/MapPlaceholder'
+import { Spinner } from '../components/ui/Spinner'
 import { useContainerDetails } from '../hooks/useContainerDetails'
 import type { FillSnapshot } from '../lib/containerApi'
 
@@ -58,7 +59,7 @@ export default function ContainerDetailsPage() {
   if (loading) {
     return (
       <div className="flex-1 h-full flex items-center justify-center bg-gray-100">
-        <FontAwesomeIcon icon={faSpinner} className="text-3xl text-gray-400 animate-spin" />
+        <Spinner size="xl" />
       </div>
     )
   }

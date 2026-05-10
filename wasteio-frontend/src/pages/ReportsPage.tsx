@@ -8,7 +8,6 @@ import {
   faDownload,
   faLocationDot,
   faMagnifyingGlass,
-  faSpinner,
   faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
 import {
@@ -17,6 +16,7 @@ import {
 import StatusBadge from '../components/containers/StatusBadge'
 import WasteTypeBadge from '../components/containers/WasteTypeBadge'
 import { useContainers } from '../hooks/useContainers'
+import { Spinner } from '../components/ui/Spinner'
 import type { Container, WasteType } from '../types/container'
 
 const DATE_RANGES = ['Today', 'This Week', 'This Month', 'All'] as const
@@ -198,6 +198,7 @@ function csvEscape(value: string | number): string {
 
 export default function ReportsPage() {
   const { containers, loading, error } = useContainers()
+
   const [activeRange, setActiveRange] = useState<DateRange>('This Week')
   const [search, setSearch] = useState('')
   const [containerSearch, setContainerSearch] = useState('')
@@ -425,6 +426,14 @@ export default function ReportsPage() {
   ]
 
   const cardBase = 'bg-white border border-gray-200 rounded-2xl transition-all duration-200 hover:border-gray-300 hover:shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.04)]'
+
+  if (loading && containers.length === 0) {
+    return (
+      <div className="flex-1 h-full flex items-center justify-center">
+        <Spinner size="xl" />
+      </div>
+    )
+  }
 
   return (
       <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-hidden">
@@ -691,7 +700,7 @@ export default function ReportsPage() {
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Fill Distribution</h3>
                     <p className="text-xs text-gray-500 mt-1">Containers by fill band</p>
                   </div>
-                  {loading && <FontAwesomeIcon icon={faSpinner} className="text-gray-300 animate-spin text-sm" />}
+                  {loading && <Spinner size="sm" />}
                 </div>
                 {containers.length === 0 ? (
                     <div className="h-[280px] flex items-center justify-center text-gray-400 text-sm">

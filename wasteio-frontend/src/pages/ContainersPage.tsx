@@ -5,6 +5,7 @@ import {
   faTriangleExclamation, faBan, faToggleOn, faToggleOff, faSliders,
 } from '@fortawesome/free-solid-svg-icons'
 import { useContainers } from '../hooks/useContainers'
+import { Spinner } from '../components/ui/Spinner'
 import ContainerTable from '../components/containers/ContainerTable'
 import ContainerFormModal from '../components/containers/ContainerFormModal'
 import DeleteConfirmModal from '../components/containers/DeleteConfirmModal'
@@ -195,11 +196,17 @@ export default function ContainersPage() {
             </div>
           </div>
 
-          <ContainerTable
-            containers={filtered}
-            onEdit={setEditTarget}
-            onDelete={setDeleteTarget}
-          />
+          {loading && containers.length === 0 ? (
+            <div className="flex items-center justify-center py-16">
+              <Spinner size="lg" />
+            </div>
+          ) : (
+            <ContainerTable
+              containers={filtered}
+              onEdit={setEditTarget}
+              onDelete={setDeleteTarget}
+            />
+          )}
         </div>
       </div>
 

@@ -5,11 +5,12 @@ import {
   faCircleQuestion, faTrafficLight, faTruck, faBuilding, faLayerGroup,
   faCity, faMap, faDownload, faTrashCan, faGlobe, faCloudArrowDown,
   faCircleInfo, faShieldHalved, faBell, faArrowRightFromBracket,
-  faUser, faSliders, faChevronDown, faKey, faCheck, faSpinner,
+  faUser, faSliders, faChevronDown, faKey, faCheck,
   faEye, faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../context/AuthContext'
 import { getStoredToken } from '../lib/authApi'
+import { Spinner } from '../components/ui/Spinner'
 
 const AUTH_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api')
     .replace(/\/api$/, '')
@@ -176,7 +177,7 @@ function PasswordSection({ email }: { email: string }) {
                     className="flex items-center justify-center gap-2 py-2 px-4 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading
-                        ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                        ? <Spinner size="sm" />
                         : success
                             ? <><FontAwesomeIcon icon={faCheck} /> Password updated!</>
                             : 'Update Password'}
@@ -338,7 +339,7 @@ export default function SettingsPage() {
                         className="flex items-center justify-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {savingName
-                          ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                          ? <Spinner size="sm" />
                           : nameSaved
                             ? <><FontAwesomeIcon icon={faCheck} /> Saved!</>
                             : 'Save Changes'}

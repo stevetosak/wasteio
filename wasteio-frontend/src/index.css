@@ -23,6 +23,12 @@
   }
 }
 
+@keyframes nav-bar {
+  0%   { transform: translateX(-100%); }
+  60%  { transform: translateX(-10%); }
+  100% { transform: translateX(100%); }
+}
+
 @keyframes route-dash {
   to { stroke-dashoffset: -1000; }
 }
