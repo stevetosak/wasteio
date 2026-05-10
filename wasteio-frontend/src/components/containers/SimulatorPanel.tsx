@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faSliders, faChevronDown, faChevronUp,
-  faTriangleExclamation, faRotateLeft, faTruck, faCheck,
+  faTriangleExclamation, faRotateLeft, faTruck, faCheck, faBolt, faArrowsRotate,
 } from '@fortawesome/free-solid-svg-icons'
 import { useSimulatorConfig } from '../../hooks/useSimulatorConfig'
 import { triggerPickup } from '../../lib/simulatorApi'
@@ -63,8 +62,6 @@ const PRESETS: Preset[] = [
 ]
 
 interface Props {
-  open: boolean
-  onToggle: () => void
   containers: Container[]
   onPickup: (id: string) => Promise<void>
 }
@@ -94,16 +91,19 @@ function Field({ label, value, onChange, type = 'text', step }: FieldProps) {
   )
 }
 
-function SectionHeader({ label }: { label: string }) {
+
+function ConfigStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-      {label}
-    </p>
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
+      <span className="text-xl font-bold text-gray-900">{value}</span>
+      {sub && <span className="text-xs text-gray-500">{sub}</span>}
+    </div>
   )
 }
 
-export default function SimulatorPanel({ open, onToggle, containers, onPickup }: Props) {
-  const { config, loading, error, load, update } = useSimulatorConfig()
+export default function SimulatorPanel({ containers, onPickup }: Props) {
+  const { config, loading, error, load, update, lastFetched } = useSimulatorConfig()
   const [draft, setDraft] = useState<SimulatorConfig | null>(null)
 
   const [selectedId, setSelectedId] = useState('')
@@ -111,9 +111,10 @@ export default function SimulatorPanel({ open, onToggle, containers, onPickup }:
   const [pickupDone, setPickupDone] = useState(false)
   const [pickupError, setPickupError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (open && !config) load()
-  }, [open, config, load])
+  const [allPickupLoading, setAllPickupLoading] = useState(false)
+  const [allPickupResult, setAllPickupResult] = useState<{ success: number; total: number } | null>(null)
+
+  useEffect(() => { load() }, [load])
 
   useEffect(() => {
     if (config) setDraft({ ...config })
@@ -148,6 +149,19 @@ export default function SimulatorPanel({ open, onToggle, containers, onPickup }:
     }
   }
 
+  async function handlePickupAll() {
+    if (allPickupLoading || containers.length === 0) return
+    setAllPickupLoading(true)
+    setAllPickupResult(null)
+    const results = await Promise.allSettled(
+      containers.map(c => triggerPickup(c.id).then(() => onPickup(c.id)))
+    )
+    const success = results.filter(r => r.status === 'fulfilled').length
+    setAllPickupLoading(false)
+    setAllPickupResult({ success, total: containers.length })
+    setTimeout(() => setAllPickupResult(null), 3000)
+  }
+
   function handleApply() {
     if (draft) update(draft)
   }
@@ -166,136 +180,224 @@ export default function SimulatorPanel({ open, onToggle, containers, onPickup }:
     if (preset.config) setDraft({ ...preset.config })
   }
 
+  const allDone = allPickupResult !== null
+  const allSuccess = allDone && allPickupResult!.success === allPickupResult!.total
+
+  const appliedPreset = config
+    ? (PRESETS.find(p => p.config && JSON.stringify(p.config) === JSON.stringify(config))?.label ?? 'Custom')
+    : null
+
   return (
-    <div className="fixed bottom-0 left-20 lg:left-64 right-0 z-40">
+    <div className="flex flex-col gap-6">
 
-      {/* Header — always visible */}
-      <button
-        onClick={onToggle}
-        className="w-full h-11 bg-gray-900 px-6 flex items-center gap-3 hover:bg-gray-800 transition-colors"
-      >
-        <FontAwesomeIcon icon={faSliders} className="text-gray-400 text-sm" />
-        <span className="text-sm font-semibold text-white">Simulator</span>
-        {error && <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-400 text-xs ml-1" />}
-        {isDirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-1" />}
-        <FontAwesomeIcon icon={open ? faChevronDown : faChevronUp} className="text-gray-400 text-xs ml-auto" />
-      </button>
-
-      {/* Content */}
-      <div className={`bg-gray-50 border-t border-gray-200 overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-80' : 'max-h-0'}`}>
-        <div className="px-6 py-4 flex flex-col gap-4">
-
-          {/* ── Simulate Pickup ─────────────────────────────────── */}
-          <div>
-            <SectionHeader label="Simulate Pickup" />
-            <div className="flex items-center gap-3">
-              <select
-                value={selectedId}
-                onChange={e => setSelectedId(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
-              >
-                {containers.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} — {Math.round(c.fillLevel)}% full
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={handlePickup}
-                disabled={pickupLoading || !selectedId}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap ${
-                  pickupDone
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-900 text-white hover:bg-gray-800'
-                }`}
-              >
-                <FontAwesomeIcon icon={pickupDone ? faCheck : faTruck} />
-                {pickupLoading ? 'Sending…' : pickupDone ? 'Sent!' : 'Trigger Pickup'}
-              </button>
-
-              {pickupError && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <FontAwesomeIcon icon={faTriangleExclamation} />
-                  {pickupError}
-                </p>
-              )}
-            </div>
+      {/* ── Applied Config ────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base font-bold text-gray-900">Applied Config</h2>
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-50 border border-green-100 text-green-700 text-xs font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Live
+            </span>
           </div>
-
-          <div className="border-t border-gray-200" />
-
-          {/* ── Simulation Parameters ────────────────────────────── */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <SectionHeader label="Simulation Parameters" />
-              <div className="flex items-center gap-1.5 mb-3">
-                {PRESETS.map(preset => {
-                  const isActive = activePreset === preset.label
-                  const isCustom = preset.config === null
-                  return (
-                    <button
-                      key={preset.label}
-                      onClick={() => !isCustom && applyPreset(preset)}
-                      disabled={isCustom}
-                      title={preset.description}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                        isActive
-                          ? 'bg-gray-900 text-white'
-                          : isCustom
-                          ? 'bg-gray-100 text-gray-400 cursor-default'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  )
-                })}
+          <div className="flex items-center gap-3">
+            {lastFetched && (
+              <span className="text-xs text-gray-400">
+                Fetched at {lastFetched.toLocaleTimeString()}
+              </span>
+            )}
+            <button
+              onClick={load}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <FontAwesomeIcon icon={faArrowsRotate} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div className="p-6">
+          {error && !config ? (
+            <p className="text-sm text-red-600 flex items-center gap-2">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+              {error}
+            </p>
+          ) : !config ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : (
+            <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-3 gap-6">
+                <ConfigStat label="Fill Interval"      value={config.fillInterval}      sub="fill update cadence" />
+                <ConfigStat label="Battery Interval"   value={config.batteryInterval}   sub="drain update cadence" />
+                <ConfigStat label="Telemetry Interval" value={config.telemetryInterval} sub="publish cadence" />
+              </div>
+              <div className="border-t border-gray-100 pt-6 grid grid-cols-3 gap-6">
+                <ConfigStat
+                  label="Fill Rate"
+                  value={`${config.fillRateMin} – ${config.fillRateMax}%`}
+                  sub="per tick"
+                />
+                <ConfigStat
+                  label="Battery Drain"
+                  value={`${config.batteryDrainMin} – ${config.batteryDrainMax}%`}
+                  sub="per tick"
+                />
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Preset</span>
+                  <span className={`self-start mt-1 px-2.5 py-1 rounded-lg text-sm font-semibold ${
+                    appliedPreset === 'Custom'
+                      ? 'bg-gray-100 text-gray-600'
+                      : 'bg-gray-900 text-white'
+                  }`}>
+                    {appliedPreset}
+                  </span>
+                </div>
               </div>
             </div>
-            {error ? (
-              <p className="text-sm text-red-600 flex items-center gap-2">
+          )}
+        </div>
+      </div>
+
+      {/* ── Simulate Pickup ───────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">Simulate Pickup</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Send a pickup event to one container or all at once.</p>
+        </div>
+        <div className="p-6 flex flex-col gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <select
+              value={selectedId}
+              onChange={e => setSelectedId(e.target.value)}
+              className="flex-1 min-w-[200px] px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+            >
+              {containers.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name} — {Math.round(c.fillLevel)}% full
+                </option>
+              ))}
+            </select>
+
+            <button
+              onClick={handlePickup}
+              disabled={pickupLoading || !selectedId}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap ${
+                pickupDone
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-900 text-white hover:bg-gray-800'
+              }`}
+            >
+              <FontAwesomeIcon icon={pickupDone ? faCheck : faTruck} />
+              {pickupLoading ? 'Sending…' : pickupDone ? 'Sent!' : 'Trigger Pickup'}
+            </button>
+
+            {pickupError && (
+              <p className="text-xs text-red-500 flex items-center gap-1">
                 <FontAwesomeIcon icon={faTriangleExclamation} />
-                {error}
+                {pickupError}
               </p>
-            ) : !draft ? (
-              <p className="text-sm text-gray-400">Loading…</p>
-            ) : (
-              <div className="flex items-end gap-4 flex-wrap">
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+            <button
+              onClick={handlePickupAll}
+              disabled={allPickupLoading || containers.length === 0}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap ${
+                allDone && allSuccess
+                  ? 'bg-green-600 text-white'
+                  : allDone
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
+            >
+              <FontAwesomeIcon icon={allDone && allSuccess ? faCheck : faBolt} />
+              {allPickupLoading
+                ? 'Sending to all…'
+                : allDone
+                ? `${allPickupResult!.success}/${allPickupResult!.total} sent`
+                : `Trigger All Pickups (${containers.length})`}
+            </button>
+            <p className="text-xs text-gray-400">Fires a pickup event for every container simultaneously.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Simulation Parameters ─────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Simulation Parameters</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Set fill and battery rates for the running simulator.</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {PRESETS.map(preset => {
+              const isActive = activePreset === preset.label
+              const isCustom = preset.config === null
+              return (
+                <button
+                  key={preset.label}
+                  onClick={() => !isCustom && applyPreset(preset)}
+                  disabled={isCustom}
+                  title={preset.description}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'bg-gray-900 text-white'
+                      : isCustom
+                      ? 'bg-gray-100 text-gray-400 cursor-default'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        <div className="p-6">
+          {error ? (
+            <p className="text-sm text-red-600 flex items-center gap-2">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+              {error}
+            </p>
+          ) : !draft ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : (
+            <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <Field label="Fill Interval"      value={draft.fillInterval}      onChange={v => set('fillInterval', v)} />
                 <Field label="Battery Interval"   value={draft.batteryInterval}   onChange={v => set('batteryInterval', v)} />
                 <Field label="Telemetry Interval" value={draft.telemetryInterval} onChange={v => set('telemetryInterval', v)} />
-
-                <div className="w-px self-stretch bg-gray-200 mx-1" />
-
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Field label="Fill Rate Min" value={draft.fillRateMin}     onChange={v => set('fillRateMin', v)}     type="number" step="0.1" />
                 <Field label="Fill Rate Max" value={draft.fillRateMax}     onChange={v => set('fillRateMax', v)}     type="number" step="0.1" />
                 <Field label="Drain Min"     value={draft.batteryDrainMin} onChange={v => set('batteryDrainMin', v)} type="number" step="0.01" />
                 <Field label="Drain Max"     value={draft.batteryDrainMax} onChange={v => set('batteryDrainMax', v)} type="number" step="0.01" />
-
-                <div className="flex gap-2 ml-auto">
-                  <button
-                    onClick={handleReset}
-                    disabled={!isDirty || loading}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <FontAwesomeIcon icon={faRotateLeft} />
-                    Reset
-                  </button>
-                  <button
-                    onClick={handleApply}
-                    disabled={!isDirty || loading}
-                    className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {loading ? 'Applying…' : 'Apply'}
-                  </button>
-                </div>
               </div>
-            )}
-          </div>
-
+              <div className="flex gap-2 justify-end pt-2 border-t border-gray-100">
+                {isDirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 self-center mr-1" />}
+                <button
+                  onClick={handleReset}
+                  disabled={!isDirty || loading}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <FontAwesomeIcon icon={faRotateLeft} />
+                  Reset
+                </button>
+                <button
+                  onClick={handleApply}
+                  disabled={!isDirty || loading}
+                  className="px-5 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? 'Applying…' : 'Apply'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
     </div>
   )
 }
