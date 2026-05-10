@@ -50,20 +50,18 @@ public class MqttMessageHandler {
                                 telemetry.getBatteryLevel()
                         ));
 
-                        if (oldLevel != telemetry.getFillLevel()) {
-                            telemetryRepository.save(
-                                    new Telemetry(container,
-                                            telemetry.getFillLevel(),
-                                            telemetry.getBatteryLevel(),
-                                            ZonedDateTime.parse(telemetry.getTimestamp()).toLocalDateTime()
-                                    )
-                            );
+                        telemetryRepository.save(
+                                new Telemetry(container,
+                                        telemetry.getFillLevel(),
+                                        telemetry.getBatteryLevel(),
+                                        ZonedDateTime.parse(telemetry.getTimestamp()).toLocalDateTime()
+                                        )
+                        );
 
-                            log.info("Device updated {} - fillLevel: {} -> {}",
-                                    telemetry.getContainerId(),
-                                    oldLevel,
-                                    telemetry.getFillLevel());
-                        }
+                        log.info("Device updated {} - fillLevel: {} -> {}",
+                                telemetry.getContainerId(),
+                                oldLevel,
+                                telemetry.getFillLevel());
 
                         // Detect pickup: 80%+ drop in fill level
                         if (oldLevel - telemetry.getFillLevel() >= 80.0) {

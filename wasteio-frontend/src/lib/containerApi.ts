@@ -1,8 +1,7 @@
 import type {Container, ContainerFormData, ContainerStatus, WasteType} from '../types/container'
 import { getStoredToken } from './authApi'
-import { envConfig } from '../config/env'
 
-const BASE = envConfig.API_URL
+const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api'
 
 interface ApiContainer {
   id: string

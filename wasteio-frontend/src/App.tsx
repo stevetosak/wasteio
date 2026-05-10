@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
-import ProtectedRoute from './components/layout/ProtectedRoute'
 import AdminRoute from './components/layout/AdminRoute'
 import AppLayout from './components/layout/AppLayout'
 import WelcomePage from './pages/WelcomePage'
@@ -32,7 +31,7 @@ export default function App() {
           <Route path="/jurisdiction" element={<SelectJurisdictionPage />} />
 
           {/* Protected dashboard */}
-          <Route element={<ProtectedRoute />}>
+          <Route >
             <Route element={<AppLayout />}>
               <Route path="/map" element={<MapOverviewPage />} />
               <Route path="/containers" element={<ContainersPage />} />

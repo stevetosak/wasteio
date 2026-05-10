@@ -1,6 +1,5 @@
-import { envConfig } from '../config/env'
-
-const AUTH_BASE = envConfig.API_URL.replace(/\/api$/, '')
+const AUTH_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api')
+  .replace(/\/api$/, '')
 
 export interface LoginResponse {
   token: string

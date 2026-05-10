@@ -1,4 +1,3 @@
-.env*
 .idea
 container-device-simulator/mosquitto/data/
 container-device-simulator/mosquitto/log/ 

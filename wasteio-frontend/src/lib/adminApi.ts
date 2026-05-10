@@ -1,7 +1,7 @@
 import { getStoredToken } from './authApi'
-import { envConfig } from '../config/env'
 
-const BASE = envConfig.API_URL.replace(/\/api$/, '')
+const BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api')
+  .replace(/\/api$/, '')
 
 export interface AdminUser {
   id: number
