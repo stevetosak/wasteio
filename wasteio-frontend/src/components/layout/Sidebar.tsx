@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faLeaf, faMapLocationDot, faRoute, faTrashCan, faBell,
-  faChartPie, faGear, faShieldHalved, faArrowRightFromBracket,
+  faChartPie, faGear, faShieldHalved, faArrowRightFromBracket, faFlask,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 
@@ -85,31 +85,37 @@ export default function Sidebar() {
           </NavLink>
         ))}
 
-        {/* Admin link — only visible to admins */}
+        {/* Admin links — only visible to admins */}
         {user?.role === 'ADMIN' && (
           <>
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-6 mb-2 px-3 hidden lg:block">Admin</div>
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-colors group ${
-                  isActive
-                    ? 'bg-purple-50 text-purple-600 border border-purple-100'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                    isActive ? 'bg-purple-500 text-white shadow-md' : 'group-hover:bg-white group-hover:shadow-sm'
-                  }`}>
-                    <FontAwesomeIcon icon={faShieldHalved} />
-                  </div>
-                  <span className="hidden lg:block">Admin Panel</span>
-                </>
-              )}
-            </NavLink>
+            {[
+              { to: '/admin', icon: faShieldHalved, label: 'Admin Panel' },
+              { to: '/simulator', icon: faFlask, label: 'Simulator' },
+            ].map(item => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-colors group ${
+                    isActive
+                      ? 'bg-purple-50 text-purple-600 border border-purple-100'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                      isActive ? 'bg-purple-500 text-white shadow-md' : 'group-hover:bg-white group-hover:shadow-sm'
+                    }`}>
+                      <FontAwesomeIcon icon={item.icon} />
+                    </div>
+                    <span className="hidden lg:block">{item.label}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
           </>
         )}
       </nav>

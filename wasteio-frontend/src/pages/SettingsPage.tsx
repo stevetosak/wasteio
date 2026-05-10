@@ -4,8 +4,10 @@ import {
   faCircleQuestion, faTrafficLight, faTruck, faBuilding, faLayerGroup,
   faCity, faMap, faDownload, faTrashCan, faGlobe, faCloudArrowDown,
   faCircleInfo, faShieldHalved, faBell, faArrowRightFromBracket,
-  faUser, faSliders, faChevronDown,
+  faUser, faSliders, faChevronDown, faFlask,
 } from '@fortawesome/free-solid-svg-icons'
+
+const DEMO_KEY = 'wasteio-demo-mode'
 
 interface ToggleProps { checked: boolean; onChange: () => void }
 
@@ -32,6 +34,15 @@ export default function SettingsPage() {
   const [mapLayers, setMapLayers] = useState({ traffic: true, trucks: true, zones: false, satellite: false })
   const [notifs, setNotifs] = useState({ overflow: true, deviation: true, sensor: false })
   const [filters, setFilters] = useState({ critical: true, moderate: true, low: false })
+  const [isDemo, setIsDemo] = useState(() => localStorage.getItem(DEMO_KEY) !== 'false')
+
+  function toggleDemo() {
+    setIsDemo(prev => {
+      const next = !prev
+      localStorage.setItem(DEMO_KEY, String(next))
+      return next
+    })
+  }
 
   return (
     <div className="flex-1 h-full flex flex-col overflow-hidden">
@@ -136,6 +147,26 @@ export default function SettingsPage() {
                 <p className="text-sm text-gray-500 mt-1">Configure how maps, routes, and filters display by default.</p>
               </div>
               <div className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Data Mode</h3>
+                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <FontAwesomeIcon icon={faFlask} className="text-gray-400 w-5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Demo Mode</p>
+                        <p className="text-xs text-gray-500">
+                          {isDemo ? 'Using local mock data — no API calls are made.' : 'Using live data from the API and telemetry stream.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isDemo ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                        {isDemo ? 'Demo' : 'Live'}
+                      </span>
+                      <Toggle checked={isDemo} onChange={toggleDemo} />
+                    </div>
+                  </div>
+                </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 mb-3">Default Map Layers</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
