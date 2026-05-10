@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faLeaf, faMapLocationDot, faRoute, faTrashCan, faBell,
   faChartPie, faGear, faShieldHalved, faArrowRightFromBracket,
-  faChevronRight,
+  faChevronRight, faFlask,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
 
