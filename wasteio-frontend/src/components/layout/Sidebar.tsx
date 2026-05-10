@@ -1,16 +1,18 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faLeaf, faMapLocationDot, faRoute, faTrashCan, faBell,
   faChartPie, faGear, faShieldHalved, faArrowRightFromBracket,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
+import { useContainers } from '../../hooks/useContainers'
 
 const navItems = [
   { to: '/map', icon: faMapLocationDot, label: 'Map Overview' },
   { to: '/routes', icon: faRoute, label: 'Pickup Routes' },
   { to: '/containers', icon: faTrashCan, label: 'Containers' },
-  { to: '/alerts', icon: faBell, label: 'Alerts', badge: 3 },
+  { to: '/alerts', icon: faBell, label: 'Alerts' },
   { to: '/reports', icon: faChartPie, label: 'Reports' },
 ]
 
@@ -21,6 +23,12 @@ function initials(name: string) {
 export default function Sidebar() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { containers } = useContainers()
+
+  const alertCount = useMemo(
+    () => containers.filter(container => container.fillLevel >= 70 || container.status === 'offline').length,
+    [containers],
+  )
 
   function handleLogout() {
     logout()
@@ -75,9 +83,9 @@ export default function Sidebar() {
                   <FontAwesomeIcon icon={item.icon} />
                 </div>
                 <span className="hidden lg:block flex-1">{item.label}</span>
-                {item.badge && (
+                {item.to === '/alerts' && alertCount > 0 && (
                   <span className="hidden lg:flex items-center justify-center bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                    {item.badge}
+                    {alertCount}
                   </span>
                 )}
               </>
