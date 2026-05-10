@@ -1,7 +1,8 @@
 import type { SimulatorConfig } from '../types/simulator'
 import { getStoredToken } from './authApi'
+import { envConfig } from '../config/env'
 
-const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api'
+const BASE = envConfig.API_URL
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getStoredToken()
