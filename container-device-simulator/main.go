@@ -16,7 +16,11 @@ import (
 )
 
 func main() {
-	brokerURL := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
+	brokerDefault := "tcp://localhost:1883"
+	if v := os.Getenv("MQTT_BROKER_URL"); v != "" {
+		brokerDefault = v
+	}
+	brokerURL := flag.String("broker", brokerDefault, "MQTT broker URL")
 	fillInterval := flag.Duration("fill-interval", 5*time.Second, "how often fill level updates")
 	batteryInterval := flag.Duration("battery-interval", 30*time.Second, "how often battery drains")
 	telemetryInterval := flag.Duration("telemetry-interval", 10*time.Second, "how often telemetry is published")

@@ -332,8 +332,8 @@ export default function MapOverviewPage() {
                 <button onClick={() => navigate(`/containers/${selectedContainer.id}`)} className="flex-1 bg-white border border-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-sm">
                   Full Details
                 </button>
-                <button className="flex-[2] bg-green-600 text-white font-semibold py-2.5 rounded-xl hover:bg-green-700 transition-colors shadow-md shadow-green-500/20 text-sm flex items-center justify-center gap-2">
-                  <FontAwesomeIcon icon={faRoute} /> Add to Route
+                <button onClick={() => navigate('/routes', { state: { preselectedContainerId: selectedContainer.id } })} className="flex-[2] bg-green-600 text-white font-semibold py-2.5 rounded-xl hover:bg-green-700 transition-colors shadow-md shadow-green-500/20 text-sm flex items-center justify-center gap-2">
+                  <FontAwesomeIcon icon={faRoute} /> Start Route from Here
                 </button>
               </div>
             </div>
