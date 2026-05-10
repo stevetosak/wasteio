@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getContainerByIdApi, fetchFillHistory, type FillSnapshot } from '../lib/containerApi'
 import type { Container } from '../types/container'
 import { useContainers } from './useContainers'
-
-const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080/api'
+import { envConfig } from '../config/env'
 
 interface LiveDetailsState {
   id: string
@@ -89,7 +88,7 @@ export function useContainerDetails(id: string) {
 
   useEffect(() => {
     if (!id || isDemo) return
-    const source = new EventSource(`${BASE}/telemetry/stream`)
+    const source = new EventSource(`${envConfig.API_URL}/telemetry/stream`)
 
     source.onmessage = (event: MessageEvent) => {
       const { containerId, fillLevel, batteryLevel } = JSON.parse(event.data as string)

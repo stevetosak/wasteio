@@ -10,6 +10,7 @@ import { MapContainer, Marker, Popup, TileLayer, Polyline } from 'react-leaflet'
 import { divIcon, type Map as LeafletMap } from 'leaflet'
 import { getStoredToken } from '../lib/authApi'
 import type { Container } from '../types/container'
+import { envConfig } from '../config/env'
 
 function markerColor(fillLevel: number): string {
   if (fillLevel > 90) return '#ef4444'
@@ -134,7 +135,7 @@ export default function ActivePickupPage() {
 
     try {
       const token = getStoredToken()
-      const res = await fetch(`http://localhost:8080/api/devices/${currentStop.id}/pickup`, {
+      const res = await fetch(`${envConfig.API_URL}/devices/${currentStop.id}/pickup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
