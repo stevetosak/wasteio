@@ -91,7 +91,7 @@ function getAlertTone(alert: Alert) {
       iconClass: 'bg-red-100 text-red-600',
       badgeClass: 'bg-red-100 text-red-700',
       rowClass: 'bg-red-50/30',
-      action: 'Add to Route',
+      action: 'Acknowledge',
     }
   }
 
@@ -110,7 +110,7 @@ function getAlertTone(alert: Alert) {
     iconClass: 'bg-gray-100 text-gray-600',
     badgeClass: 'bg-gray-100 text-gray-700',
     rowClass: '',
-    action: 'Create Ticket',
+    action: 'Acknowledge',
   }
 }
 
@@ -146,6 +146,11 @@ export default function AlertsPage() {
   const [activeFilter, setActiveFilter] = useState<AlertFilter>('All Active')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDistrict, setSelectedDistrict] = useState('All')
+  const [confirmAcknowledge, setConfirmAcknowledge] = useState<{
+    mode: 'single' | 'visible'
+    alert?: Alert
+    count: number
+  } | null>(null)
 
   const alerts = useMemo(
     () => containers.map(alertFromContainer).filter((alert): alert is Alert => alert !== null),
@@ -193,16 +198,27 @@ export default function AlertsPage() {
     resolved: acknowledgedIds.size,
   }), [activeAlerts, acknowledgedIds])
 
-  function acknowledge(id: string) {
-    setAcknowledgedIds(current => new Set(current).add(id))
+  function requestAcknowledge(alert: Alert) {
+    setConfirmAcknowledge({ mode: 'single', alert, count: 1 })
   }
 
-  function acknowledgeVisible() {
+  function requestAcknowledgeVisible() {
+    setConfirmAcknowledge({ mode: 'visible', count: filteredAlerts.length })
+  }
+
+  function confirmAcknowledgeAction() {
+    if (!confirmAcknowledge) return
+
     setAcknowledgedIds(current => {
       const next = new Set(current)
-      filteredAlerts.forEach(alert => next.add(alert.id))
+      if (confirmAcknowledge.mode === 'single' && confirmAcknowledge.alert) {
+        next.add(confirmAcknowledge.alert.id)
+      } else {
+        filteredAlerts.forEach(alert => next.add(alert.id))
+      }
       return next
     })
+    setConfirmAcknowledge(null)
   }
 
   return (
@@ -295,7 +311,7 @@ export default function AlertsPage() {
                   <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
                 </div>
                 <button
-                  onClick={acknowledgeVisible}
+                  onClick={requestAcknowledgeVisible}
                   disabled={filteredAlerts.length === 0}
                   className="px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-semibold rounded-xl transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -380,7 +396,7 @@ export default function AlertsPage() {
                               </Link>
                             )}
                             <button
-                              onClick={() => acknowledge(alert.id)}
+                              onClick={() => requestAcknowledge(alert)}
                               className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors shadow-sm"
                             >
                               {tone.action}
@@ -403,6 +419,40 @@ export default function AlertsPage() {
           </section>
         </div>
       </div>
+
+      {confirmAcknowledge && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden">
+            <div className="p-5 border-b border-gray-100 flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <FontAwesomeIcon icon={faTriangleExclamation} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Acknowledge alert?</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {confirmAcknowledge.mode === 'single' && confirmAcknowledge.alert
+                    ? `This will remove ${confirmAcknowledge.alert.id} from the active alerts list.`
+                    : `This will remove ${confirmAcknowledge.count} visible alerts from the active alerts list.`}
+                </p>
+              </div>
+            </div>
+            <div className="p-5 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmAcknowledge(null)}
+                className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAcknowledgeAction}
+                className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                Acknowledge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
