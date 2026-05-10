@@ -1,7 +1,9 @@
 package com.tosak.wasteio.wasteioapi.controller;
 
 import com.tosak.wasteio.wasteioapi.sse.TelemetryBroadcaster;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
@@ -19,6 +21,10 @@ public class TelemetryController {
     // and the returned SseEmitter is used to push data whenever we call broadcast().
     @GetMapping("/stream")
     public SseEmitter stream() {
-        return broadcaster.register();
+        try {
+            return broadcaster.register();
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+        }
     }
 }

@@ -6,6 +6,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { useContainers } from '../hooks/useContainers'
 import { Spinner } from '../components/ui/Spinner'
+import { TelemetryStatusBadge } from '../components/ui/TelemetryStatusBadge'
 import ContainerTable from '../components/containers/ContainerTable'
 import ContainerFormModal from '../components/containers/ContainerFormModal'
 import DeleteConfirmModal from '../components/containers/DeleteConfirmModal'
@@ -34,7 +35,7 @@ function StatCard({ label, value, icon, iconClass }: StatCardProps) {
 }
 
 export default function ContainersPage() {
-  const { containers, loading, error, createContainer, updateContainer, deleteContainer } = useContainers()
+  const { containers, loading, error, isDemo, createContainer, updateContainer, deleteContainer, streamStatus, streamAttempt, streamError, retryStream } = useContainers()
 
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<ContainerStatus | 'all'>('all')
@@ -85,6 +86,14 @@ export default function ContainersPage() {
           <p className="text-sm text-gray-500 mt-0.5">{containers.length} containers in this jurisdiction</p>
         </div>
         <div className="flex items-center gap-3">
+          {!isDemo && (
+            <TelemetryStatusBadge
+              status={streamStatus}
+              attempt={streamAttempt}
+              error={streamError}
+              onRetry={retryStream}
+            />
+          )}
           <div className="relative bg-gray-50 rounded-xl flex items-center p-2 border border-gray-200 w-64 hidden md:flex">
             <div className="pl-2 text-gray-400">
               <FontAwesomeIcon icon={faMagnifyingGlass} />
