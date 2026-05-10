@@ -41,10 +41,10 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* User Profile — clickable, navigates to /profile */}
+        {/* User Profile — clickable, navigates to /settings */}
         <div className="p-4 border-b border-gray-50 hidden lg:block">
           <NavLink
-              to="/profile"
+              to="/settings"
               className={({ isActive }) =>
                   `flex items-center gap-3 px-2 py-2 rounded-xl border transition-colors ${
                       isActive

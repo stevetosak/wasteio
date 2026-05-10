@@ -18,7 +18,6 @@ import SettingsPage from './pages/SettingsPage'
 import AdminPage from './pages/AdminPage'
 import NotFoundPage from './pages/NotFoundPage'
 import LearnMorePage from './pages/LearnMorePage'
-import ProfilePage from './pages/ProfilePage'
 
 export default function App() {
   return (
@@ -43,7 +42,6 @@ export default function App() {
                 <Route path="/alerts" element={<AlertsPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
               </Route>
             </Route>
 
