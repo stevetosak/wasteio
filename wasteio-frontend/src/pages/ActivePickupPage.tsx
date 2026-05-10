@@ -4,11 +4,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowsTurnRight, faPlus, faMinus, faLocationArrow, faLocationDot,
   faClipboardList, faCarSide, faDumpsterFire, faTriangleExclamation,
-  faCircleDot, faFlagCheckered, faSpinner, faCheck,
+  faCircleDot, faFlagCheckered, faCheck,
 } from '@fortawesome/free-solid-svg-icons'
 import { MapContainer, Marker, Popup, TileLayer, Polyline } from 'react-leaflet'
 import { divIcon, type Map as LeafletMap } from 'leaflet'
 import { getStoredToken } from '../lib/authApi'
+import { Spinner } from '../components/ui/Spinner'
 import type { Container } from '../types/container'
 import { envConfig } from '../config/env'
 
@@ -399,7 +400,8 @@ export default function ActivePickupPage() {
                   }`}
                 >
                   {isCollecting ? (
-                    <><FontAwesomeIcon icon={faSpinner} spin /> Collecting…</>
+                    <><Spinner size="sm" /> Collecting…</>
+
                   ) : (
                     <><FontAwesomeIcon icon={faCheck} /> {isLastStop ? 'Complete Final Stop' : 'Complete Pickup'}</>
                   )}

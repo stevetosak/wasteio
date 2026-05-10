@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faLeaf, faMapLocationDot, faRoute, faTrashCan, faBell,
+  faRecycle, faMapLocationDot, faRoute, faTrashCan, faBell,
   faChartPie, faGear, faShieldHalved, faArrowRightFromBracket,
   faChevronRight, faFlask,
 } from '@fortawesome/free-solid-svg-icons'
@@ -35,9 +35,9 @@ export default function Sidebar() {
         <div className="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-gray-50 flex-shrink-0">
           <button onClick={() => navigate('/map')} className="inline-flex items-center gap-3 group">
             <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-500/30 group-hover:scale-105 transition-transform">
-              <FontAwesomeIcon icon={faLeaf} className="text-xl" />
+              <FontAwesomeIcon icon={faRecycle} className="text-xl" />
             </div>
-            <span className="text-xl font-bold text-gray-900 tracking-tight hidden lg:block">EcoSkopje</span>
+            <span className="text-xl font-bold text-gray-900 tracking-tight hidden lg:block">Wasteio</span>
           </button>
         </div>
 

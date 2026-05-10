@@ -4,11 +4,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faMagnifyingGlass, faTruckFast, faPlay, faPlus, faMinus,
   faLocationCrosshairs, faCheck, faTrashCan, faRoute, faFileExport,
-  faLocationArrow, faSpinner, faFlag,
+  faLocationArrow, faFlag,
 } from '@fortawesome/free-solid-svg-icons'
 import { MapContainer, Marker, Popup, TileLayer, Polyline } from 'react-leaflet'
 import { divIcon, type Map as LeafletMap } from 'leaflet'
 import { useContainers } from '../hooks/useContainers'
+import { Spinner } from '../components/ui/Spinner'
 import type { Container } from '../types/container'
 
 function markerColor(fillLevel: number): string {
@@ -132,7 +133,7 @@ async function fetchRoute(waypoints: Container[]): Promise<{
 export default function PickupRoutesPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { containers } = useContainers()
+  const { containers, loading } = useContainers()
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [minFillLevel, setMinFillLevel] = useState(50)
@@ -397,13 +398,17 @@ export default function PickupRoutesPage() {
                   <FontAwesomeIcon icon={faCheck} className="text-green-600 text-[10px]" /> <span>= Additional stop</span>
                 </div>
 
-                {filteredContainers.length === 0 && (
+                {loading && containers.length === 0 ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Spinner size="lg" />
+                  </div>
+                ) : filteredContainers.length === 0 ? (
                   <div className="text-center py-8 text-gray-400 text-sm">
                     No containers match the current filter
                   </div>
-                )}
+                ) : null}
 
-                {filteredContainers.map(c => {
+                {!loading && filteredContainers.map(c => {
                   const isFirst = c.id === firstContainerId
                   const isAdditional = selectedContainerIds.has(c.id)
                   const additionalDisabled = !isAdditional && additionalCount >= additionalMax && additionalMax > 0
@@ -495,7 +500,8 @@ export default function PickupRoutesPage() {
               }`}
             >
               {isRouteLoading ? (
-                <><FontAwesomeIcon icon={faSpinner} spin /> Routing along streets…</>
+                <><Spinner size="sm" /> Routing along streets…</>
+
               ) : (
                 <><FontAwesomeIcon icon={faRoute} /> Generate Route ({totalCount} stops)</>
               )}
