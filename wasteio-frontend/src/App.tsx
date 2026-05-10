@@ -16,6 +16,7 @@ import AlertsPage from './pages/AlertsPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
 import AdminPage from './pages/AdminPage'
+import SimulatorPage from './pages/SimulatorPage'
 import NotFoundPage from './pages/NotFoundPage'
 import LearnMorePage from './pages/LearnMorePage'
 import GuestRoute from './components/layout/GuestRoute'
@@ -46,12 +47,13 @@ const router = createBrowserRouter(
         </Route>
       </Route>
 
-      {/* Admin-only */}
-      <Route element={<AdminRoute />}>
-        <Route element={<AppLayout />}>
-          <Route path="/admin" element={<AdminPage />} />
-        </Route>
-      </Route>
+          {/* Admin-only */}
+          <Route element={<AdminRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/simulator" element={<SimulatorPage />} />
+            </Route>
+          </Route>
 
       <Route path="*" element={<NotFoundPage />} />
     </>

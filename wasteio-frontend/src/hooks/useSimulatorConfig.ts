@@ -6,12 +6,14 @@ export function useSimulatorConfig() {
   const [config, setConfig] = useState<SimulatorConfig | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastFetched, setLastFetched] = useState<Date | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       setConfig(await fetchSimulatorConfig())
+      setLastFetched(new Date())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to reach simulator')
     } finally {
@@ -24,6 +26,7 @@ export function useSimulatorConfig() {
     setError(null)
     try {
       setConfig(await updateSimulatorConfig(patch))
+      setLastFetched(new Date())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update simulator config')
     } finally {
@@ -31,5 +34,5 @@ export function useSimulatorConfig() {
     }
   }, [])
 
-  return { config, loading, error, load, update }
+  return { config, loading, error, load, update, lastFetched }
 }
