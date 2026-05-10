@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { Container, ContainerFormData } from '../types/container'
 import {
   fetchContainers,
@@ -8,6 +8,7 @@ import {
   getContainerByIdApi,
 } from '../lib/containerApi'
 import { envConfig } from '../config/env'
+import { useTelemetryStream } from './useTelemetryStream'
 
 const INITIAL_CONTAINERS: Container[] = [
   {
@@ -146,32 +147,26 @@ export function useContainers() {
     return () => { cancelled = true }
   }, [isDemo])
 
-  // Subscribe to the SSE telemetry stream in live mode.
-  // EventSource opens a persistent HTTP connection — the server pushes a JSON
-  // event each time a container's telemetry is updated via MQTT.
-  // We patch only fillLevel and batteryLevel so CRUD state isn't overwritten.
-  useEffect(() => {
-    if (isDemo) return
-
-    const source = new EventSource(`${envConfig.API_URL}/telemetry/stream`)
-
-    source.onmessage = (event: MessageEvent) => {
-      const { containerId, fillLevel, batteryLevel } = JSON.parse(event.data as string)
+  const handleTelemetryMessage = useCallback((data: string) => {
+    try {
+      const { containerId, fillLevel, batteryLevel } = JSON.parse(data) as {
+        containerId: string
+        fillLevel: number
+        batteryLevel: number
+      }
       setLiveContainers(prev =>
         prev.map(c => c.id === containerId ? { ...c, fillLevel, batteryLevel } : c)
       )
+    } catch {
+      // malformed event payload — ignore
     }
+  }, [])
 
-    // onerror fires on connection drop, but EventSource retries automatically —
-    // no manual reconnect logic needed.
-    source.onerror = () => {
-      if (source.readyState === EventSource.CLOSED) {
-        setError('Telemetry stream disconnected')
-      }
-    }
-
-    return () => source.close()
-  }, [isDemo])
+  const { status: streamStatus, attempt: streamAttempt, error: streamError, retry: retryStream } = useTelemetryStream(
+    `${envConfig.API_URL}/telemetry/stream`,
+    handleTelemetryMessage,
+    !isDemo,
+  )
 
   function toggleDemo() {
     setIsDemo(prev => {
@@ -257,5 +252,5 @@ export function useContainers() {
     }
   }
 
-  return { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer }
+  return { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer, streamStatus, streamAttempt, streamError, retryStream }
 }

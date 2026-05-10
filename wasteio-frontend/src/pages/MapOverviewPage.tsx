@@ -10,6 +10,7 @@ import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import { divIcon, type Map as LeafletMap } from 'leaflet'
 import { useContainers } from '../hooks/useContainers'
 import { Spinner } from '../components/ui/Spinner'
+import { TelemetryStatusBadge } from '../components/ui/TelemetryStatusBadge'
 import type { Container } from '../types/container'
 
 function markerColor(fillLevel: number): string {
@@ -63,7 +64,7 @@ function markerIcon(container: Container, selected: boolean) {
 
 export default function MapOverviewPage() {
   const navigate = useNavigate()
-  const { containers, loading, isDemo } = useContainers()
+  const { containers, loading, isDemo, streamStatus, streamAttempt, streamError, retryStream } = useContainers()
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [showPreview, setShowPreview] = useState(true)
   const [search, setSearch] = useState('')
@@ -190,6 +191,14 @@ export default function MapOverviewPage() {
               <span className="px-3 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-xs font-semibold text-gray-500 flex items-center gap-2">
                 <Spinner size="xs" /> Loading…
               </span>
+            )}
+            {!isDemo && (
+              <TelemetryStatusBadge
+                status={streamStatus}
+                attempt={streamAttempt}
+                error={streamError}
+                onRetry={retryStream}
+              />
             )}
             <div className="h-6 w-px bg-gray-300 self-center mx-1" />
             <button
