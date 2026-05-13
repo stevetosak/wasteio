@@ -210,7 +210,7 @@ export default function SettingsPage() {
   const [mapLayers, setMapLayers] = useState({ traffic: true, trucks: true, zones: false, satellite: false })
   const [notifs, setNotifs] = useState({ overflow: true, deviation: true, sensor: false })
   const [filters, setFilters] = useState({ critical: true, moderate: true, low: false })
-  const [isDemo, setIsDemo] = useState(() => localStorage.getItem(DEMO_KEY) !== 'false')
+  const [isDemo, setIsDemo] = useState(() => localStorage.getItem(DEMO_KEY) === 'true')
 
   function toggleDemo() {
     setIsDemo(prev => {

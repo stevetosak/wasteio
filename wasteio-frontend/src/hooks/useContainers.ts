@@ -113,7 +113,7 @@ const DEMO_KEY = 'wasteio-demo-mode'
 const delay = (ms: number) => new Promise<void>(res => setTimeout(res, ms))
 
 export function useContainers() {
-  const [isDemo, setIsDemo] = useState(() => localStorage.getItem(DEMO_KEY) !== 'false')
+  const [isDemo, setIsDemo] = useState(() => localStorage.getItem(DEMO_KEY) === 'true')
 
   // Demo containers are independent local state seeded with mock data.
   // Live containers are populated from the API and reset on each toggle to live.
