@@ -6,7 +6,7 @@ import {
   faPlus, faMinus, faLocationCrosshairs, faLayerGroup,
   faXmark, faTemperatureHalf, faBatteryThreeQuarters, faRoute,
 } from '@fortawesome/free-solid-svg-icons'
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
+import { MapContainer, Marker, TileLayer } from 'react-leaflet'
 import { divIcon, type Map as LeafletMap } from 'leaflet'
 import { useContainers } from '../hooks/useContainers'
 import { Spinner } from '../components/ui/Spinner'
@@ -142,15 +142,7 @@ export default function MapOverviewPage() {
                 setShowPreview(true)
               },
             }}
-          >
-            <Popup>
-              <div className="text-sm">
-                <p className="font-semibold">{container.name}</p>
-                <p className="text-gray-600">{container.address}</p>
-                <p className="mt-1">Fill level: {container.fillLevel}%</p>
-              </div>
-            </Popup>
-          </Marker>
+          />
         ))}
       </MapContainer>
 
