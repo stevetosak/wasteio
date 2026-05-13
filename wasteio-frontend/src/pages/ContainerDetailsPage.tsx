@@ -82,25 +82,27 @@ export default function ContainerDetailsPage() {
   return (
     <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
       {/* Header */}
-      <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/containers')} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors border border-gray-200">
+      <header className="flex justify-between items-center gap-3 mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={() => navigate('/containers')} className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors border border-gray-200 flex-shrink-0">
             <FontAwesomeIcon icon={faArrowLeft} />
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{container.name}</h1>
-            <p className="text-sm text-gray-500 flex items-center gap-2">
-              <FontAwesomeIcon icon={faLocationDot} className="text-gray-400" />
-              {container.address || 'No address'}
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{container.name}</h1>
+            <p className="text-sm text-gray-500 flex items-center gap-2 truncate">
+              <FontAwesomeIcon icon={faLocationDot} className="text-gray-400 flex-shrink-0" />
+              <span className="truncate">{container.address || 'No address'}</span>
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-900 hover:bg-gray-50 transition-all flex items-center gap-2">
-            <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> Export
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button className="w-10 h-10 sm:w-auto sm:px-4 sm:py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-900 hover:bg-gray-50 transition-all flex items-center justify-center sm:gap-2">
+            <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+            <span className="hidden sm:inline">Export</span>
           </button>
-          <button className="px-5 py-2.5 bg-gray-900 text-white rounded-xl shadow-md text-sm font-medium hover:bg-gray-800 transition-all flex items-center gap-2">
-            <FontAwesomeIcon icon={faPlus} /> Add to Route
+          <button className="w-10 h-10 sm:w-auto sm:px-5 sm:py-2.5 bg-gray-900 text-white rounded-xl shadow-md text-sm font-medium hover:bg-gray-800 transition-all flex items-center justify-center sm:gap-2">
+            <FontAwesomeIcon icon={faPlus} />
+            <span className="hidden sm:inline">Add to Route</span>
           </button>
         </div>
       </header>

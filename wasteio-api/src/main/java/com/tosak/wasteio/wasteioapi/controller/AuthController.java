@@ -5,6 +5,7 @@ import com.tosak.wasteio.wasteioapi.dto.UserResponse;
 import com.tosak.wasteio.wasteioapi.model.User;
 import com.tosak.wasteio.wasteioapi.service.AuthService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +34,11 @@ public class AuthController {
     public LoginResponse login(@RequestParam String email,
                                @RequestParam String password) {
         return authService.login(email, password);
+    }
+
+    @GetMapping("/me")
+    public UserResponse me(Authentication authentication) {
+        return authService.getMe(authentication.getName());
     }
 
     // TODO: ne e funkcionalno

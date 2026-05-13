@@ -55,7 +55,46 @@ export default function ContainerTable({ containers, onEdit, onDelete }: Props) 
   }
 
   return (
-    <div className="overflow-x-auto">
+    <>
+      {/* Mobile card list */}
+      <div className="md:hidden divide-y divide-gray-50">
+        {containers.map(container => (
+          <div key={container.id} className="flex items-center gap-3 px-4 py-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <button
+                  onClick={() => navigate(`/containers/${container.id}`)}
+                  className="font-mono font-bold text-gray-900 text-sm hover:text-gray-500 transition-colors"
+                >
+                  {container.id}
+                </button>
+                <StatusBadge status={container.status} />
+              </div>
+              <p className="text-xs text-gray-500 truncate mb-1.5">{container.address}</p>
+              <div className="w-32">
+                <FillLevelBar level={container.fillLevel} />
+              </div>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={() => onEdit(container)}
+                className="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center transition-colors"
+              >
+                <FontAwesomeIcon icon={faPen} className="text-xs" />
+              </button>
+              <button
+                onClick={() => onDelete(container)}
+                className="w-8 h-8 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors"
+              >
+                <FontAwesomeIcon icon={faTrash} className="text-xs" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-100">
@@ -127,6 +166,7 @@ export default function ContainerTable({ containers, onEdit, onDelete }: Props) 
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   )
 }

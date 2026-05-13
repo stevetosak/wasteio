@@ -115,6 +115,13 @@ public class AuthService {
         );
     }
 
+    // GET CURRENT USER
+    public UserResponse getMe(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getPhoneNumber(), user.getRole());
+    }
+
     // CHANGE PASSWORD - ne e funkcionalno
     @Transactional
     public void changePassword(String email, String currentPassword, String newPassword) {

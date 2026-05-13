@@ -106,6 +106,7 @@ export default function ActivePickupPage() {
   const [completedStops, setCompletedStops] = useState<number[]>([])
   const [isCollecting, setIsCollecting] = useState(false)
   const [collectError, setCollectError] = useState<string | null>(null)
+  const [mobileView, setMobileView] = useState<'map' | 'details'>('map')
 
   if (!routeData || stops.length === 0) return null
 
@@ -164,15 +165,29 @@ export default function ActivePickupPage() {
   return (
     <div className="flex-1 h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="h-20 flex justify-between items-center px-6 bg-white border-b border-gray-200 flex-shrink-0 z-20 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Active Pickup</h1>
-          <p className="text-sm text-gray-500">
+      <header className="h-14 sm:h-20 flex justify-between items-center px-4 sm:px-6 bg-white border-b border-gray-200 flex-shrink-0 z-20 shadow-sm gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Active Pickup</h1>
+          <p className="text-xs sm:text-sm text-gray-500 truncate">
             Optimized Route • {completedCount} of {stops.length} completed
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-xl border border-green-200 text-green-700 font-medium text-sm">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex lg:hidden bg-gray-100 rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setMobileView('map')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${mobileView === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            >
+              Map
+            </button>
+            <button
+              onClick={() => setMobileView('details')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${mobileView === 'details' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            >
+              Details
+            </button>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 bg-green-50 px-3 py-2 rounded-xl border border-green-200 text-green-700 font-medium text-sm">
             <FontAwesomeIcon icon={faCircleDot} className="text-xs animate-pulse" />
             <span>Live Tracking</span>
           </div>
@@ -181,7 +196,7 @@ export default function ActivePickupPage() {
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Map Area */}
-        <div className="flex-1 relative">
+        <div className={`${mobileView === 'map' ? 'flex-1' : 'hidden'} lg:flex-1 relative`}>
           <MapContainer center={[41.9981, 21.4254]} zoom={13} className="absolute inset-0 z-0" ref={setMap}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -257,6 +272,30 @@ export default function ActivePickupPage() {
             </div>
           )}
 
+          {/* Mobile floating Complete button — shown on map view only */}
+          <div className="lg:hidden absolute bottom-4 inset-x-4 z-20">
+            {isFinished ? (
+              <button onClick={handleFinish} className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg">
+                <FontAwesomeIcon icon={faFlagCheckered} /> Finish Route
+              </button>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={handleCollect}
+                  disabled={isCollecting}
+                  className={`w-full font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${
+                    isCollecting ? 'bg-gray-200 text-gray-500 cursor-wait'
+                    : collectError ? 'bg-red-500 text-white'
+                    : 'bg-gray-900 hover:bg-gray-800 text-white'
+                  }`}
+                >
+                  {isCollecting ? <><Spinner size="sm" /> Collecting…</> : <><FontAwesomeIcon icon={faCheck} /> {isLastStop ? 'Complete Final Stop' : 'Complete Pickup'}</>}
+                </button>
+                {collectError && <p className="text-xs text-red-500 text-center bg-white/80 rounded-lg px-2 py-1">{collectError}</p>}
+              </div>
+            )}
+          </div>
+
           {/* Route Progress Bottom */}
           <div className="absolute bottom-6 left-6 z-10 hidden lg:block">
             <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-200 flex items-center gap-6">
@@ -278,7 +317,7 @@ export default function ActivePickupPage() {
         </div>
 
         {/* Right Panel: Turn-by-Turn */}
-        <div className="w-full lg:w-[480px] bg-white border-l border-gray-200 flex flex-col h-full flex-shrink-0 z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.05)]">
+        <div className={`${mobileView === 'details' ? 'flex' : 'hidden'} lg:flex w-full lg:w-[480px] bg-white border-l border-gray-200 flex-col h-full flex-shrink-0 z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.05)]`}>
           {/* Progress */}
           <div className="p-6 border-b border-gray-200 bg-gray-50">
             <div className="flex justify-between items-center mb-3">

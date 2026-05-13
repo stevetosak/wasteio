@@ -192,7 +192,7 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
 
       {/* ── Applied Config ────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
           <div className="flex items-center gap-2.5">
             <h2 className="text-base font-bold text-gray-900">Applied Config</h2>
             <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-50 border border-green-100 text-green-700 text-xs font-medium">
@@ -202,7 +202,7 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
           </div>
           <div className="flex items-center gap-3">
             {lastFetched && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 hidden sm:inline">
                 Fetched at {lastFetched.toLocaleTimeString()}
               </span>
             )}
@@ -216,7 +216,7 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
             </button>
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {error && !config ? (
             <p className="text-sm text-red-600 flex items-center gap-2">
               <FontAwesomeIcon icon={faTriangleExclamation} />
@@ -226,12 +226,12 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
             <p className="text-sm text-gray-400">Loading…</p>
           ) : (
             <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
                 <ConfigStat label="Fill Interval"      value={config.fillInterval}      sub="fill update cadence" />
                 <ConfigStat label="Battery Interval"   value={config.batteryInterval}   sub="drain update cadence" />
                 <ConfigStat label="Telemetry Interval" value={config.telemetryInterval} sub="publish cadence" />
               </div>
-              <div className="border-t border-gray-100 pt-6 grid grid-cols-3 gap-6">
+              <div className="border-t border-gray-100 pt-6 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
                 <ConfigStat
                   label="Fill Rate"
                   value={`${config.fillRateMin} – ${config.fillRateMax}%`}
@@ -260,11 +260,11 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
 
       {/* ── Simulate Pickup ───────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100">
           <h2 className="text-base font-bold text-gray-900">Simulate Pickup</h2>
           <p className="text-sm text-gray-500 mt-0.5">Send a pickup event to one container or all at once.</p>
         </div>
-        <div className="p-6 flex flex-col gap-4">
+        <div className="p-4 sm:p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3 flex-wrap">
             <select
               value={selectedId}
@@ -299,7 +299,7 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
             )}
           </div>
 
-          <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 pt-2 border-t border-gray-100">
             <button
               onClick={handlePickupAll}
               disabled={allPickupLoading || containers.length === 0}
@@ -316,7 +316,7 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
                 ? 'Sending to all…'
                 : allDone
                 ? `${allPickupResult!.success}/${allPickupResult!.total} sent`
-                : `Trigger All Pickups (${containers.length})`}
+                : `Trigger All (${containers.length})`}
             </button>
             <p className="text-xs text-gray-400">Fires a pickup event for every container simultaneously.</p>
           </div>
@@ -325,12 +325,36 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
 
       {/* ── Simulation Parameters ─────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">Simulation Parameters</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Set fill and battery rates for the running simulator.</p>
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Simulation Parameters</h2>
+              <p className="text-sm text-gray-500 mt-0.5 hidden sm:block">Set fill and battery rates for the running simulator.</p>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5">
+              {PRESETS.map(preset => {
+                const isActive = activePreset === preset.label
+                const isCustom = preset.config === null
+                return (
+                  <button
+                    key={preset.label}
+                    onClick={() => !isCustom && applyPreset(preset)}
+                    disabled={isCustom}
+                    title={preset.description}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      isActive ? 'bg-gray-900 text-white'
+                      : isCustom ? 'bg-gray-100 text-gray-400 cursor-default'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          {/* Preset buttons on their own row for mobile */}
+          <div className="flex sm:hidden items-center gap-1.5 mt-3">
             {PRESETS.map(preset => {
               const isActive = activePreset === preset.label
               const isCustom = preset.config === null
@@ -340,12 +364,10 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
                   onClick={() => !isCustom && applyPreset(preset)}
                   disabled={isCustom}
                   title={preset.description}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    isActive
-                      ? 'bg-gray-900 text-white'
-                      : isCustom
-                      ? 'bg-gray-100 text-gray-400 cursor-default'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    isActive ? 'bg-gray-900 text-white'
+                    : isCustom ? 'bg-gray-100 text-gray-400 cursor-default'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   {preset.label}
@@ -354,7 +376,7 @@ export default function SimulatorPanel({ containers, onPickup }: Props) {
             })}
           </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {error ? (
             <p className="text-sm text-red-600 flex items-center gap-2">
               <FontAwesomeIcon icon={faTriangleExclamation} />

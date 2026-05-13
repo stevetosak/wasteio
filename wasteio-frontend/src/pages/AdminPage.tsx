@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faShieldHalved, faUserPlus, faLink, faCheck, faTrash,
-  faUserTie, faUser, faCircleCheck, faClock,
+  faUserTie, faUser, faCircleCheck, faClock, faFlask,
 } from '@fortawesome/free-solid-svg-icons'
 import {
   generateInviteToken, fetchUsers, deleteUser, fetchTokens,
@@ -20,6 +21,7 @@ function roleBadge(role: string) {
 }
 
 export default function AdminPage() {
+  const navigate = useNavigate()
   const { user: me } = useAuth()
 
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -81,14 +83,23 @@ export default function AdminPage() {
   return (
     <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
       {/* Header */}
-      <header className="flex items-center gap-4 mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
-        <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
-          <FontAwesomeIcon icon={faShieldHalved} />
+      <header className="flex items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 flex-shrink-0">
+            <FontAwesomeIcon icon={faShieldHalved} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+            <p className="text-sm text-gray-500">Manage users and invitations</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
-          <p className="text-sm text-gray-500">Manage users and invitations</p>
-        </div>
+        <button
+          onClick={() => navigate('/simulator')}
+          className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-700 border border-purple-200 text-sm font-medium rounded-xl hover:bg-purple-100 transition-colors flex-shrink-0"
+        >
+          <FontAwesomeIcon icon={faFlask} />
+          <span className="hidden sm:inline">Simulator</span>
+        </button>
       </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-8 px-4 lg:px-6">

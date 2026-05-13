@@ -155,9 +155,9 @@ export default function MapOverviewPage() {
       </MapContainer>
 
       {/* Top Header Overlay */}
-      <header className="absolute top-0 left-0 right-0 z-20 p-4 lg:p-6 pointer-events-none flex justify-between items-start gap-4">
+      <header className="absolute top-0 left-0 right-0 z-20 p-3 lg:p-6 pointer-events-none flex justify-between items-start gap-3">
         {/* Search & Filters */}
-        <div className="flex-1 max-w-2xl flex flex-col gap-3 pointer-events-auto">
+        <div className="flex-1 max-w-2xl flex flex-col gap-2 pointer-events-auto min-w-0">
           <div className="relative bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] flex items-center p-2 border border-gray-100">
             <div className="pl-3 text-gray-400">
               <FontAwesomeIcon icon={faMagnifyingGlass} />
@@ -166,54 +166,55 @@ export default function MapOverviewPage() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search container ID, address, or street..."
+              placeholder="Search containers..."
               className="w-full bg-transparent border-none focus:outline-none focus:ring-0 px-3 py-2 text-sm text-gray-800 placeholder-gray-400"
             />
-            <button className="w-10 h-10 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors flex items-center justify-center">
+            <button className="w-10 h-10 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors flex-shrink-0 flex items-center justify-center">
               <FontAwesomeIcon icon={faMicrophone} />
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             <button
               onClick={() => setActiveFilter('all')}
-              className={`px-4 py-2 rounded-xl shadow-sm border text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl shadow-sm border text-xs font-medium transition-all flex items-center gap-1.5 ${
                 activeFilter === 'all'
                   ? 'bg-green-50 border-green-300 text-green-700'
                   : 'bg-white border-gray-200 text-gray-700 hover:border-green-300 hover:bg-green-50'
               }`}
             >
-              <FontAwesomeIcon icon={faFilter} className="text-gray-400" /> All Filters
+              <FontAwesomeIcon icon={faFilter} className="text-gray-400" /> All
             </button>
-            <span className="px-3 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-xs font-semibold text-gray-600">
-              Source: {isDemo ? 'Demo' : 'Live'}
+            <span className="flex-shrink-0 hidden sm:inline-flex px-3 py-1.5 bg-white rounded-xl shadow-sm border border-gray-200 text-xs font-semibold text-gray-600 items-center">
+              {isDemo ? 'Demo' : 'Live'}
             </span>
             {loading && (
-              <span className="px-3 py-2 bg-white rounded-xl shadow-sm border border-gray-200 text-xs font-semibold text-gray-500 flex items-center gap-2">
+              <span className="flex-shrink-0 hidden sm:inline-flex px-3 py-1.5 bg-white rounded-xl shadow-sm border border-gray-200 text-xs font-semibold text-gray-500 items-center gap-2">
                 <Spinner size="xs" /> Loading…
               </span>
             )}
             {!isDemo && (
-              <TelemetryStatusBadge
-                status={streamStatus}
-                attempt={streamAttempt}
-                error={streamError}
-                onRetry={retryStream}
-              />
+              <span className="flex-shrink-0 hidden sm:inline-flex">
+                <TelemetryStatusBadge
+                  status={streamStatus}
+                  attempt={streamAttempt}
+                  error={streamError}
+                  onRetry={retryStream}
+                />
+              </span>
             )}
-            <div className="h-6 w-px bg-gray-300 self-center mx-1" />
             <button
               onClick={() => setActiveFilter('critical')}
-              className={`px-4 py-2 rounded-xl shadow-sm text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl shadow-sm text-xs font-medium transition-all flex items-center gap-1.5 ${
                 activeFilter === 'critical'
                   ? 'bg-red-100 border border-red-300 text-red-800'
                   : 'bg-red-50 border border-red-200 text-red-700 hover:bg-red-100'
               }`}
             >
-              <div className="w-2 h-2 rounded-full bg-red-500" /> Critical
+              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" /> Critical
             </button>
             <button
               onClick={() => setActiveFilter('plastic')}
-              className={`px-4 py-2 rounded-xl shadow-sm text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl shadow-sm text-xs font-medium transition-all flex items-center gap-1.5 ${
                 activeFilter === 'plastic'
                   ? 'bg-blue-50 border border-blue-300 text-blue-700'
                   : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -223,7 +224,7 @@ export default function MapOverviewPage() {
             </button>
             <button
               onClick={() => setActiveFilter('general')}
-              className={`px-4 py-2 rounded-xl shadow-sm text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl shadow-sm text-xs font-medium transition-all flex items-center gap-1.5 ${
                 activeFilter === 'general'
                   ? 'bg-gray-100 border border-gray-300 text-gray-800'
                   : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -262,8 +263,8 @@ export default function MapOverviewPage() {
         </div>
       </header>
 
-      {/* Legend */}
-      <div className="absolute bottom-6 left-6 lg:left-8 z-20 pointer-events-auto">
+      {/* Legend — desktop only */}
+      <div className="hidden lg:block absolute bottom-6 left-8 z-20 pointer-events-auto">
         <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 p-4 w-48">
           <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Map Legend</h4>
           <div className="space-y-3">
@@ -292,9 +293,9 @@ export default function MapOverviewPage() {
 
       {/* Container Preview Sheet */}
       {showPreview && selectedContainer && (
-        <div className="absolute bottom-6 right-6 lg:right-8 z-30 pointer-events-auto w-full max-w-sm">
+        <div className="absolute inset-x-3 bottom-3 lg:inset-x-auto lg:right-8 lg:bottom-6 lg:w-full lg:max-w-sm z-30 pointer-events-auto">
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col">
-            <div className="p-5">
+            <div className="p-4 lg:p-5">
               <div className="flex justify-between items-start mb-4">
                 <span className="bg-yellow-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
                   ⚠ {previewBadge(selectedContainer.fillLevel)}
@@ -319,7 +320,7 @@ export default function MapOverviewPage() {
                 </div>
               </div>
 
-              <div className="mb-5">
+              <div className="mb-4 sm:mb-5">
                 <div className="flex justify-between items-end mb-2">
                   <span className="text-sm font-semibold text-gray-700">Fill Level</span>
                   <span className="text-lg font-bold text-yellow-600">{selectedContainer.fillLevel}%</span>
@@ -330,7 +331,7 @@ export default function MapOverviewPage() {
                 <p className="text-xs text-gray-500 mt-2 text-right">Last pickup: {selectedContainer.lastPickup ? new Date(selectedContainer.lastPickup).toLocaleString() : '—'}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="hidden sm:grid grid-cols-2 gap-3 mb-6">
                 <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                   <div className="text-gray-400 mb-1 text-sm"><FontAwesomeIcon icon={faTemperatureHalf} /></div>
                   <span className="block text-sm font-semibold text-gray-900">24°C</span>
