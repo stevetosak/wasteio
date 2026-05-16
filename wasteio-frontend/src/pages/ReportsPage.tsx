@@ -5,18 +5,16 @@ import {
   faArrowRight,
   faArrowUpRightFromSquare,
   faCircleCheck,
-  faDownload,
-  faLocationDot,
   faMagnifyingGlass,
-  faSpinner,
   faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import StatusBadge from '../components/containers/StatusBadge'
 import WasteTypeBadge from '../components/containers/WasteTypeBadge'
 import { useContainers } from '../hooks/useContainers'
+import { Spinner } from '../components/ui/Spinner'
 import type { Container, WasteType } from '../types/container'
 
 const DATE_RANGES = ['Today', 'This Week', 'This Month', 'All'] as const
@@ -33,20 +31,6 @@ const WASTE_LABELS: Record<WasteType, string> = {
 
 const numberFormat = new Intl.NumberFormat('en-US')
 
-interface DistrictRow {
-  name: string
-  containers: number
-  pickups: number
-  avgFill: number
-  capacityLiters: number
-  currentLoad: number
-  critical: number
-  sensorRisk: number
-  score: number
-  status: string
-  statusClass: string
-  fillClass: string
-}
 
 function formatNumber(value: number): string {
   return numberFormat.format(Math.round(value))
@@ -108,29 +92,10 @@ function hasPickupInRange(container: Container, range: DateRange): boolean {
   return pickupDate >= start && pickupDate <= new Date()
 }
 
-function districtStatus(row: Pick<DistrictRow, 'avgFill' | 'critical' | 'sensorRisk'>) {
-  if (row.sensorRisk > 0) {
-    return { label: 'Sensor Risk', className: 'text-gray-700 bg-gray-100' }
-  }
-  if (row.critical > 0 || row.avgFill >= 80) {
-    return { label: 'Needs Pickup', className: 'text-red-700 bg-red-50' }
-  }
-  if (row.avgFill >= 60) {
-    return { label: 'Monitor', className: 'text-amber-700 bg-amber-50' }
-  }
-  return { label: 'Optimal', className: 'text-green-700 bg-green-50' }
-}
-
 function fillClass(level: number): string {
   if (level >= 80) return 'bg-red-500'
   if (level >= 60) return 'bg-amber-500'
   return 'bg-green-500'
-}
-
-function fillColor(level: number): string {
-  if (level >= 80) return '#ef4444'
-  if (level >= 60) return '#f59e0b'
-  return '#22c55e'
 }
 
 function containerRiskScore(container: Container): number {
@@ -190,16 +155,11 @@ function containerName(container: Container): string {
   return container.name?.trim() || container.id
 }
 
-function csvEscape(value: string | number): string {
-  const text = String(value)
-  if (!/[",\n]/.test(text)) return text
-  return `"${text.replaceAll('"', '""')}"`
-}
 
 export default function ReportsPage() {
   const { containers, loading, error } = useContainers()
+
   const [activeRange, setActiveRange] = useState<DateRange>('This Week')
-  const [search, setSearch] = useState('')
   const [containerSearch, setContainerSearch] = useState('')
 
   const summary = useMemo(() => {
@@ -234,70 +194,6 @@ export default function ReportsPage() {
       sensorRisk, active, pickupsInRange, optimal, monitor, readiness,
     }
   }, [activeRange, containers])
-
-  const districtRows = useMemo<DistrictRow[]>(() => {
-    const grouped = new Map<string, {
-      containers: number
-      pickups: number
-      fillTotal: number
-      capacityLiters: number
-      currentLoad: number
-      critical: number
-      sensorRisk: number
-    }>()
-
-    containers.forEach(container => {
-      const name = districtFromAddress(container.address)
-      const row = grouped.get(name) ?? {
-        containers: 0, pickups: 0, fillTotal: 0, capacityLiters: 0,
-        currentLoad: 0, critical: 0, sensorRisk: 0,
-      }
-      const fill = safeFillLevel(container)
-
-      row.containers += 1
-      row.pickups += hasPickupInRange(container, activeRange) ? 1 : 0
-      row.fillTotal += fill
-      row.capacityLiters += capacity(container)
-      row.currentLoad += currentLoad(container)
-      row.critical += fill >= 90 ? 1 : 0
-      row.sensorRisk += container.status === 'offline' || safeBatteryLevel(container) <= 25 ? 1 : 0
-
-      grouped.set(name, row)
-    })
-
-    return Array.from(grouped.entries())
-        .map(([name, row]) => {
-          const avgFill = row.containers ? Math.round(row.fillTotal / row.containers) : 0
-          const score = Math.round(clamp(
-              100 - Math.max(0, avgFill - 70) * 0.8 - row.critical * 10 - row.sensorRisk * 7,
-              35,
-              100
-          ))
-          const status = districtStatus({ avgFill, critical: row.critical, sensorRisk: row.sensorRisk })
-
-          return {
-            name,
-            containers: row.containers,
-            pickups: row.pickups,
-            avgFill,
-            capacityLiters: row.capacityLiters,
-            currentLoad: row.currentLoad,
-            critical: row.critical,
-            sensorRisk: row.sensorRisk,
-            score,
-            status: status.label,
-            statusClass: status.className,
-            fillClass: fillClass(avgFill),
-          }
-        })
-        .sort((a, b) => b.currentLoad - a.currentLoad || b.avgFill - a.avgFill || a.name.localeCompare(b.name))
-  }, [activeRange, containers])
-
-  const filteredDistrictRows = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return districtRows
-    return districtRows.filter(row => row.name.toLowerCase().includes(query))
-  }, [districtRows, search])
 
   const pressureData = useMemo(() => [
     { level: '0-49%', containers: containers.filter(container => safeFillLevel(container) < 50).length },
@@ -342,35 +238,7 @@ export default function ReportsPage() {
     })
   }, [containerSearch, containers])
 
-  function handleExport() {
-    const rows = [
-      ['District', 'Containers', 'Pickups in range', 'Average fill %', 'Current load L', 'Capacity L', 'Critical containers', 'Sensor risks', 'Efficiency score', 'Status'],
-      ...filteredDistrictRows.map(row => [
-        row.name, row.containers, row.pickups, row.avgFill,
-        Math.round(row.currentLoad), Math.round(row.capacityLiters),
-        row.critical, row.sensorRisk, row.score, row.status,
-      ]),
-    ]
-    const csv = rows.map(row => row.map(csvEscape).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `wasteio-reports-${activeRange.toLowerCase().replaceAll(' ', '-')}.csv`
-    document.body.append(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
-  }
-
-  const topDistrict = districtRows[0]
   const capacityRemaining = Math.max(summary.totalCapacity - summary.totalLoad, 0)
-  const districtChartData = districtRows.slice(0, 8).map(row => ({
-    district: row.name,
-    fill: row.avgFill,
-    load: Math.round(row.currentLoad),
-    pickups: row.pickups,
-  }))
 
   const totalForBar = containers.length || 1
   const statusSegments = [
@@ -426,6 +294,14 @@ export default function ReportsPage() {
 
   const cardBase = 'bg-white border border-gray-200 rounded-2xl transition-all duration-200 hover:border-gray-300 hover:shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.04)]'
 
+  if (loading && containers.length === 0) {
+    return (
+      <div className="flex-1 h-full flex items-center justify-center">
+        <Spinner size="xl" />
+      </div>
+    )
+  }
+
   return (
       <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-hidden">
         <header className="min-h-20 flex flex-col sm:flex-row justify-between sm:items-center gap-3 px-4 py-4 lg:px-8 bg-white border-b border-gray-200 flex-shrink-0 z-20">
@@ -459,13 +335,6 @@ export default function ReportsPage() {
                   </button>
               ))}
             </div>
-            <button
-                onClick={handleExport}
-                className="group inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap hover:gap-2.5"
-            >
-              <FontAwesomeIcon icon={faDownload} className="text-xs transition-transform group-hover:-translate-y-0.5" />
-              Export
-            </button>
           </div>
         </header>
 
@@ -574,15 +443,10 @@ export default function ReportsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4 mt-7 pt-6 border-t border-white/10">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 mt-7 pt-6 border-t border-white/10">
                     <div>
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.18em]">Pickups · {activeRange}</p>
                       <p className="text-xl font-bold tabular-nums mt-1.5">{formatNumber(summary.pickupsInRange.length)}</p>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.18em]">Top District</p>
-                      <p className="text-xl font-bold mt-1.5 truncate">{topDistrict?.name ?? '—'}</p>
-                      <p className="text-[11px] text-gray-500 truncate">{topDistrict ? `${topDistrict.avgFill}% avg fill` : 'No data'}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.18em]">Avg Battery</p>
@@ -648,77 +512,39 @@ export default function ReportsPage() {
               </div>
             </section>
 
-            <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.55fr)] gap-5">
-              <div className={`${cardBase} p-5`}>
-                <div className="flex items-start justify-between gap-4 mb-5">
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">District Load</h3>
-                    <p className="text-xs text-gray-500 mt-1">Top 8 by occupied capacity</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] text-gray-500">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-gray-900" /> Load</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-green-500" /> Avg fill</span>
-                  </div>
+            <section className={`${cardBase} p-5`}>
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Fill Distribution</h3>
+                  <p className="text-xs text-gray-500 mt-1">Containers by fill band</p>
                 </div>
-                {districtChartData.length === 0 ? (
-                    <div className="h-[280px] flex items-center justify-center text-gray-400 text-sm">
-                      No telemetry available.
-                    </div>
-                ) : (
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={districtChartData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                        <XAxis dataKey="district" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={value => formatNumber(Number(value))} />
-                        <Tooltip
-                            cursor={{ fill: 'rgba(0,0,0,0.03)' }}
-                            contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
-                            formatter={(value, name) => [
-                              name === 'load' ? formatLiters(Number(value)) : `${formatNumber(Number(value))}%`,
-                              name === 'load' ? 'Current load' : 'Avg fill',
-                            ]}
-                        />
-                        <Bar dataKey="load" fill="#111827" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="fill" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                )}
+                {loading && <Spinner size="sm" />}
               </div>
-
-              <div className={`${cardBase} p-5`}>
-                <div className="flex items-start justify-between gap-4 mb-5">
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Fill Distribution</h3>
-                    <p className="text-xs text-gray-500 mt-1">Containers by fill band</p>
+              {containers.length === 0 ? (
+                  <div className="h-[280px] flex items-center justify-center text-gray-400 text-sm">
+                    No containers to chart.
                   </div>
-                  {loading && <FontAwesomeIcon icon={faSpinner} className="text-gray-300 animate-spin text-sm" />}
-                </div>
-                {containers.length === 0 ? (
-                    <div className="h-[280px] flex items-center justify-center text-gray-400 text-sm">
-                      No containers to chart.
-                    </div>
-                ) : (
-                    <ResponsiveContainer width="100%" height={280}>
-                      <AreaChart data={pressureData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="pressureGradModern" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                        <XAxis dataKey="level" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <Tooltip
-                            cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }}
-                            contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
-                            formatter={value => [formatNumber(Number(value)), 'Containers']}
-                        />
-                        <Area type="monotone" dataKey="containers" stroke="#22c55e" strokeWidth={2.5} fill="url(#pressureGradModern)" dot={{ fill: '#22c55e', r: 4 }} activeDot={{ r: 6, strokeWidth: 2, stroke: 'white' }} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                )}
-              </div>
+              ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <AreaChart data={pressureData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="pressureGradModern" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                      <XAxis dataKey="level" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip
+                          cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }}
+                          contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+                          formatter={value => [formatNumber(Number(value)), 'Containers']}
+                      />
+                      <Area type="monotone" dataKey="containers" stroke="#22c55e" strokeWidth={2.5} fill="url(#pressureGradModern)" dot={{ fill: '#22c55e', r: 4 }} activeDot={{ r: 6, strokeWidth: 2, stroke: 'white' }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+              )}
             </section>
 
             <section className={`${cardBase} overflow-hidden`}>
@@ -855,110 +681,30 @@ export default function ReportsPage() {
               </div>
             </section>
 
-            <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.45fr)] gap-5 pb-4">
-              <div className={`${cardBase} overflow-hidden`}>
-                <div className="px-5 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">District Performance</h3>
-                    <p className="text-xs text-gray-500 mt-1">{filteredDistrictRows.length} district{filteredDistrictRows.length === 1 ? '' : 's'}</p>
-                  </div>
-                  <div className="relative w-full sm:w-64">
-                    <input
-                        type="text"
-                        placeholder="Search districts..."
-                        value={search}
-                        onChange={event => setSearch(event.target.value)}
-                        className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500/30 focus:border-green-500 outline-none transition-all"
-                    />
-                    <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-[0.1em]">
-                      <th className="px-5 py-3 text-left">District</th>
-                      <th className="px-3 py-3 text-right">Cont.</th>
-                      <th className="px-3 py-3 text-right">Pickups</th>
-                      <th className="px-3 py-3 text-left">Avg Fill</th>
-                      <th className="px-3 py-3 text-right">Load</th>
-                      <th className="px-3 py-3 text-right">Risks</th>
-                      <th className="px-5 py-3 text-right">Status</th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                    {filteredDistrictRows.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="p-12 text-center text-sm text-gray-400">
-                            No districts match this search.
-                          </td>
-                        </tr>
-                    ) : filteredDistrictRows.map(row => (
-                        <tr key={row.name} className="group/drow hover:bg-gradient-to-r hover:from-gray-50 hover:via-gray-50/60 hover:to-transparent transition-colors">
-                          <td className="px-5 py-3">
-                            <div className="flex items-center gap-3">
-                              <FontAwesomeIcon icon={faLocationDot} className="text-gray-300 text-xs group-hover/drow:text-gray-500 transition-colors" />
-                              <div className="min-w-0">
-                                <p className="font-semibold text-gray-900 truncate">{row.name}</p>
-                                <p className="text-[10px] text-gray-400 tabular-nums">Score {row.score}/100</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-right text-gray-600 tabular-nums">{formatNumber(row.containers)}</td>
-                          <td className="px-3 py-3 text-right text-gray-600 tabular-nums">{formatNumber(row.pickups)}</td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2 min-w-[120px]">
-                              <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                <div
-                                    className={`${row.fillClass} h-full rounded-full transition-all duration-300 group-hover/drow:brightness-110`}
-                                    style={{ width: `${row.avgFill}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold text-gray-700 tabular-nums w-8 text-right">{row.avgFill}%</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-right text-gray-600 tabular-nums whitespace-nowrap">{formatLiters(row.currentLoad)}</td>
-                          <td className="px-3 py-3 text-right">
-                              <span className="inline-flex items-center gap-1.5 text-gray-600 tabular-nums">
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: fillColor(row.avgFill) }} />
-                                {formatNumber(row.critical + row.sensorRisk)}
-                              </span>
-                          </td>
-                          <td className="px-5 py-3 text-right">
-                            <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${row.statusClass}`}>{row.status}</span>
-                          </td>
-                        </tr>
-                    ))}
-                    </tbody>
-                  </table>
-                </div>
+            <section className={`${cardBase} p-5 pb-4`}>
+              <div className="mb-5">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Waste Stream Mix</h3>
+                <p className="text-xs text-gray-500 mt-1">Fill levels by waste type</p>
               </div>
-
-              <div className={`${cardBase} p-5`}>
-                <div className="mb-5">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Waste Stream Mix</h3>
-                  <p className="text-xs text-gray-500 mt-1">Fill levels by waste type</p>
-                </div>
-                <div className="space-y-5">
-                  {wasteTypeRows.map(row => (
-                      <div key={row.type} className="group/wrow -mx-2 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors cursor-default">
-                        <div className="flex items-center justify-between mb-2 gap-2">
-                          <WasteTypeBadge type={row.type} />
-                          <span className="text-base font-bold text-gray-900 tabular-nums">{row.avgFill}%</span>
-                        </div>
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1.5">
-                          <div
-                              className={`${fillClass(row.avgFill)} h-full rounded-full transition-all duration-300 group-hover/wrow:brightness-110`}
-                              style={{ width: `${row.avgFill}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] text-gray-500">
-                          <span>{row.containers} containers</span>
-                          <span className="tabular-nums">{formatLiters(row.load)}</span>
-                        </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {wasteTypeRows.map(row => (
+                    <div key={row.type} className="group/wrow -mx-2 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors cursor-default">
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <WasteTypeBadge type={row.type} />
+                        <span className="text-base font-bold text-gray-900 tabular-nums">{row.avgFill}%</span>
                       </div>
-                  ))}
-                </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1.5">
+                        <div
+                            className={`${fillClass(row.avgFill)} h-full rounded-full transition-all duration-300 group-hover/wrow:brightness-110`}
+                            style={{ width: `${row.avgFill}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-gray-500">
+                        <span>{row.containers} containers</span>
+                        <span className="tabular-nums">{formatLiters(row.load)}</span>
+                      </div>
+                    </div>
+                ))}
               </div>
             </section>
           </div>

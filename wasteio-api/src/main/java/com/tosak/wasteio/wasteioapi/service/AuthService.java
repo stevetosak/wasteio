@@ -30,10 +30,9 @@ public class AuthService {
 
     // ADMIN -> generate token
     public String generateToken(String email) {
-
         User admin = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
-        
+
         String token = UUID.randomUUID().toString();
 
         RegistrationToken regToken = new RegistrationToken();
@@ -49,7 +48,6 @@ public class AuthService {
     // REGISTER EMPLOYEE
     @Transactional
     public User register(String token, String name, String email, String password, String phoneNumber) {
-
         RegistrationToken regToken = tokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));
 
@@ -67,14 +65,14 @@ public class AuthService {
         User savedUser = userRepository.save(user);
         regToken.setUsed(true);
         tokenRepository.save(regToken);
-        
+
         return savedUser;
     }
 
     // ADMIN -> list all users
     public List<UserResponse> listUsers() {
         return userRepository.findAll().stream()
-                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(),u.getPhoneNumber(), u.getRole()))
+                .map(u -> new UserResponse(u.getId(), u.getName(), u.getEmail(), u.getPhoneNumber(), u.getRole()))
                 .toList();
     }
 
@@ -102,19 +100,43 @@ public class AuthService {
     public LoginResponse login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User Not Found"));
-        
-        if (!encoder.matches(password, user.getPassword())){
+
+        if (!encoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Wrong password");
         }
-        
+
         String jwtToken = jwtTokenProvider.generateToken(email);
-        
+
         return new LoginResponse(
                 jwtToken,
                 user.getEmail(),
                 user.getName(),
                 user.getRole().toString()
         );
-        
+    }
+
+    // GET CURRENT USER
+    public UserResponse getMe(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getPhoneNumber(), user.getRole());
+    }
+
+    // CHANGE PASSWORD - ne e funkcionalno
+    @Transactional
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!encoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new RuntimeException("New password must be at least 8 characters");
+        }
+
+        user.setPassword(encoder.encode(newPassword));
+        userRepository.save(user);
     }
 }

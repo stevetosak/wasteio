@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faLeaf, faArrowRight, faChartPie, faRoute, faBell, faClockRotateLeft,
+  faRecycle, faArrowRight, faChartPie, faRoute, faBell, faClockRotateLeft,
   faShieldHalved, faMobileScreen,
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -48,9 +48,9 @@ export default function LearnMorePage() {
         <div className="p-8 lg:p-16 border-b border-gray-100">
           <button onClick={() => navigate('/')} className="inline-flex items-center gap-3 group mb-12">
             <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-500/30 group-hover:scale-105 transition-transform">
-              <FontAwesomeIcon icon={faLeaf} className="text-xl" />
+              <FontAwesomeIcon icon={faRecycle} className="text-xl" />
             </div>
-            <span className="text-2xl font-bold text-gray-900 tracking-tight">EcoSkopje</span>
+            <span className="text-2xl font-bold text-gray-900 tracking-tight">Wasteio</span>
           </button>
 
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm font-medium mb-6">
@@ -58,11 +58,11 @@ export default function LearnMorePage() {
             Smart Waste Management System
           </span>
           <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-4">
-            How EcoSkopje<br />
+            How Wasteio<br />
             <span className="text-green-600">Works</span>
           </h1>
           <p className="text-lg text-gray-600 leading-relaxed max-w-2xl">
-            EcoSkopje is a smart waste management platform built for municipal services in Skopje.
+            Wasteio is a smart waste management platform built for municipal services in Skopje.
             Real-time IoT sensors track container fill levels and the system automatically generates
             optimal collection routes.
           </p>
@@ -100,7 +100,7 @@ export default function LearnMorePage() {
         </div>
 
         <div className="px-8 lg:px-16 pb-8 flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-6">
-          <p>&copy; 2024 EcoSkopje</p>
+          <p>&copy; 2026 Wasteio</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-green-600 transition-colors">Help</a>
             <a href="#" className="hover:text-green-600 transition-colors">Privacy</a>

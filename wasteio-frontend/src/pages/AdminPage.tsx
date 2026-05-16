@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faShieldHalved, faUserPlus, faLink, faCheck, faTrash,
-  faSpinner, faUserTie, faUser, faCircleCheck, faClock,
+  faUserTie, faUser, faCircleCheck, faClock, faFlask,
 } from '@fortawesome/free-solid-svg-icons'
 import {
   generateInviteToken, fetchUsers, deleteUser, fetchTokens,
   type AdminUser, type AdminToken,
 } from '../lib/adminApi'
 import { useAuth } from '../context/AuthContext'
+import { Spinner } from '../components/ui/Spinner'
 
 const FRONTEND_BASE = window.location.origin
 
@@ -19,6 +21,7 @@ function roleBadge(role: string) {
 }
 
 export default function AdminPage() {
+  const navigate = useNavigate()
   const { user: me } = useAuth()
 
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -80,14 +83,23 @@ export default function AdminPage() {
   return (
     <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
       {/* Header */}
-      <header className="flex items-center gap-4 mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
-        <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
-          <FontAwesomeIcon icon={faShieldHalved} />
+      <header className="flex items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mx-4 mt-4 lg:mx-6 lg:mt-6">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 flex-shrink-0">
+            <FontAwesomeIcon icon={faShieldHalved} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+            <p className="text-sm text-gray-500">Manage users and invitations</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
-          <p className="text-sm text-gray-500">Manage users and invitations</p>
-        </div>
+        <button
+          onClick={() => navigate('/simulator')}
+          className="flex items-center gap-2 px-4 py-2.5 bg-purple-50 text-purple-700 border border-purple-200 text-sm font-medium rounded-xl hover:bg-purple-100 transition-colors flex-shrink-0"
+        >
+          <FontAwesomeIcon icon={faFlask} />
+          <span className="hidden sm:inline">Simulator</span>
+        </button>
       </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-8 px-4 lg:px-6">
@@ -104,7 +116,7 @@ export default function AdminPage() {
               className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {generating
-                ? <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                ? <Spinner size="sm" />
                 : copiedId === 'new'
                   ? <FontAwesomeIcon icon={faCheck} className="text-green-400" />
                   : <FontAwesomeIcon icon={faUserPlus} />}
@@ -114,7 +126,7 @@ export default function AdminPage() {
 
           {loadingTokens ? (
             <div className="flex justify-center py-8">
-              <FontAwesomeIcon icon={faSpinner} className="text-gray-300 text-2xl animate-spin" />
+              <Spinner size="lg" />
             </div>
           ) : tokens.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No invitations yet</p>
@@ -163,7 +175,7 @@ export default function AdminPage() {
 
           {loadingUsers ? (
             <div className="flex justify-center py-8">
-              <FontAwesomeIcon icon={faSpinner} className="text-gray-300 text-2xl animate-spin" />
+              <Spinner size="lg" />
             </div>
           ) : (
             <div className="flex flex-col gap-2 overflow-y-auto max-h-[420px] pr-1">
@@ -187,7 +199,7 @@ export default function AdminPage() {
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
                     >
                       {deletingId === u.id
-                        ? <FontAwesomeIcon icon={faSpinner} className="text-xs animate-spin" />
+                        ? <Spinner size="xs" />
                         : <FontAwesomeIcon icon={faTrash} className="text-xs" />}
                     </button>
                   )}

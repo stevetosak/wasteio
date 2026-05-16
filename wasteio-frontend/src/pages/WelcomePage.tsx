@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLeaf, faChartPie, faRoute, faArrowRight, faCircleQuestion, faLocationDot } from '@fortawesome/free-solid-svg-icons'
+import { faRecycle, faChartPie, faRoute, faArrowRight, faCircleQuestion, faLocationDot } from '@fortawesome/free-solid-svg-icons'
 
 export default function WelcomePage() {
   const navigate = useNavigate()
@@ -12,9 +12,9 @@ export default function WelcomePage() {
         <section className="w-full lg:w-5/12 p-8 lg:p-16 flex flex-col justify-center relative z-10 bg-white">
           <div className="mb-12 flex items-center gap-3">
             <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-500/30">
-              <FontAwesomeIcon icon={faLeaf} className="text-xl" />
+              <FontAwesomeIcon icon={faRecycle} className="text-xl" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">EcoSkopje</h1>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Wasteio</h1>
           </div>
 
           <div className="space-y-6 mb-12">
@@ -67,7 +67,7 @@ export default function WelcomePage() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-            <p>&copy; 2024 EcoSkopje</p>
+            <p>&copy; 2026 Wasteio</p>
             <div className="flex gap-4">
               <a href="#" className="hover:text-green-600 transition-colors">Help</a>
               <a href="#" className="hover:text-green-600 transition-colors">Privacy</a>

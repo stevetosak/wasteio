@@ -4,11 +4,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faMagnifyingGlass, faTruckFast, faPlay, faPlus, faMinus,
   faLocationCrosshairs, faCheck, faTrashCan, faRoute, faFileExport,
-  faLocationArrow, faSpinner, faFlag,
+  faLocationArrow, faFlag,
 } from '@fortawesome/free-solid-svg-icons'
 import { MapContainer, Marker, Popup, TileLayer, Polyline } from 'react-leaflet'
 import { divIcon, type Map as LeafletMap } from 'leaflet'
 import { useContainers } from '../hooks/useContainers'
+import { Spinner } from '../components/ui/Spinner'
 import type { Container } from '../types/container'
 
 function markerColor(fillLevel: number): string {
@@ -132,7 +133,7 @@ async function fetchRoute(waypoints: Container[]): Promise<{
 export default function PickupRoutesPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { containers } = useContainers()
+  const { containers, loading } = useContainers()
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [minFillLevel, setMinFillLevel] = useState(50)
@@ -148,6 +149,7 @@ export default function PickupRoutesPage() {
   const [routePath, setRoutePath] = useState<[number, number][] | null>(null)
   const [isRouteLoading, setIsRouteLoading] = useState(false)
   const [showStartPrompt, setShowStartPrompt] = useState(false)
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('list')
   const lastFittedKeyRef = useRef<string>('')
 
   const filteredContainers = useMemo(
@@ -266,13 +268,28 @@ export default function PickupRoutesPage() {
   return (
     <div className="flex-1 h-full flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
-      <header className="h-20 flex justify-between items-center px-6 lg:px-8 bg-white border-b border-gray-200 flex-shrink-0 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pickup Routes</h1>
-          <p className="text-sm text-gray-500">Route Creator • Select containers and generate an optimized route</p>
+      <header className="h-14 sm:h-20 flex justify-between items-center px-4 lg:px-8 bg-white border-b border-gray-200 flex-shrink-0 shadow-sm gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Pickup Routes</h1>
+          <p className="hidden sm:block text-sm text-gray-500">Route Creator • Select containers and generate an optimized route</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200 text-green-600 font-medium text-sm">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Mobile view toggle */}
+          <div className="flex lg:hidden bg-gray-100 rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setMobileView('list')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${mobileView === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setMobileView('map')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${mobileView === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            >
+              Map
+            </button>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200 text-green-600 font-medium text-sm">
             <FontAwesomeIcon icon={faRoute} />
             <span>{generatedRoute ? `${generatedRoute.containers.length} stops` : 'No route'}</span>
           </div>
@@ -281,7 +298,7 @@ export default function PickupRoutesPage() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel: Route Creator */}
-        <div className="w-full lg:w-[400px] xl:w-[450px] flex flex-col border-r border-gray-200 bg-white flex-shrink-0 h-full overflow-hidden">
+        <div className={`${mobileView === 'list' ? 'flex' : 'hidden'} lg:flex w-full lg:w-[400px] xl:w-[450px] flex-col border-r border-gray-200 bg-white flex-shrink-0 h-full overflow-hidden`}>
           {/* Search */}
           <div className="p-4 border-b border-gray-200">
             <div className="relative bg-gray-50 rounded-xl flex items-center p-2 border border-gray-200">
@@ -397,13 +414,17 @@ export default function PickupRoutesPage() {
                   <FontAwesomeIcon icon={faCheck} className="text-green-600 text-[10px]" /> <span>= Additional stop</span>
                 </div>
 
-                {filteredContainers.length === 0 && (
+                {loading && containers.length === 0 ? (
+                  <div className="flex items-center justify-center py-16">
+                    <Spinner size="lg" />
+                  </div>
+                ) : filteredContainers.length === 0 ? (
                   <div className="text-center py-8 text-gray-400 text-sm">
                     No containers match the current filter
                   </div>
-                )}
+                ) : null}
 
-                {filteredContainers.map(c => {
+                {!loading && filteredContainers.map(c => {
                   const isFirst = c.id === firstContainerId
                   const isAdditional = selectedContainerIds.has(c.id)
                   const additionalDisabled = !isAdditional && additionalCount >= additionalMax && additionalMax > 0
@@ -495,7 +516,8 @@ export default function PickupRoutesPage() {
               }`}
             >
               {isRouteLoading ? (
-                <><FontAwesomeIcon icon={faSpinner} spin /> Routing along streets…</>
+                <><Spinner size="sm" /> Routing along streets…</>
+
               ) : (
                 <><FontAwesomeIcon icon={faRoute} /> Generate Route ({totalCount} stops)</>
               )}
@@ -504,7 +526,7 @@ export default function PickupRoutesPage() {
         </div>
 
         {/* Right Panel: Map + Stop Details */}
-        <div className="flex-1 relative flex flex-col">
+        <div className={`${mobileView === 'map' ? 'flex' : 'hidden'} lg:flex flex-1 relative flex-col`}>
           <div className="flex-1 relative">
             <MapContainer center={[41.9981, 21.4254]} zoom={13} className="absolute inset-0 z-0" ref={setMap}>
               <TileLayer
@@ -568,7 +590,7 @@ export default function PickupRoutesPage() {
           </div>
 
           {/* Stop Details Drawer */}
-          <div className="h-64 bg-white border-t border-gray-200 flex-shrink-0 flex flex-col">
+          <div className="h-48 sm:h-64 bg-white border-t border-gray-200 flex-shrink-0 flex flex-col">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <h2 className="text-lg font-bold text-gray-900">
@@ -581,11 +603,11 @@ export default function PickupRoutesPage() {
                 )}
               </div>
               <div className="flex gap-2">
-                <button className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-                  <FontAwesomeIcon icon={faFileExport} /> Export Manifest
+                <button className="w-9 h-9 sm:w-auto sm:px-4 sm:py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center sm:gap-2">
+                  <FontAwesomeIcon icon={faFileExport} /><span className="hidden sm:inline"> Export Manifest</span>
                 </button>
-                <button className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
-                  <FontAwesomeIcon icon={faLocationArrow} /> Send to Driver
+                <button className="w-9 h-9 sm:w-auto sm:px-4 sm:py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center sm:gap-2 shadow-sm">
+                  <FontAwesomeIcon icon={faLocationArrow} /><span className="hidden sm:inline"> Send to Driver</span>
                 </button>
               </div>
             </div>

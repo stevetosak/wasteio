@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLeaf, faTriangleExclamation, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { faRecycle, faTriangleExclamation, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 
 export default function NotFoundPage() {
   const navigate = useNavigate()
@@ -10,9 +10,9 @@ export default function NotFoundPage() {
       <div className="text-center">
         <button onClick={() => navigate('/')} className="inline-flex items-center gap-3 mb-12 group">
           <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-500/30 group-hover:scale-105 transition-transform">
-            <FontAwesomeIcon icon={faLeaf} className="text-xl" />
+            <FontAwesomeIcon icon={faRecycle} className="text-xl" />
           </div>
-          <span className="text-2xl font-bold text-gray-900 tracking-tight">EcoSkopje</span>
+          <span className="text-2xl font-bold text-gray-900 tracking-tight">Wasteio</span>
         </button>
 
         <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">

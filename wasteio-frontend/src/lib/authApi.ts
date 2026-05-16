@@ -42,11 +42,14 @@ export async function registerApi(
   return authPost<UserResponse>('/auth/register', { token, name, email, password })
 }
 
+export async function getMeApi(token: string): Promise<UserResponse> {
+  const res = await fetch(`${AUTH_BASE}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`Unauthorized (${res.status})`)
+  return res.json() as Promise<UserResponse>
+}
+
 export function getStoredToken(): string | null {
-  try {
-    const raw = localStorage.getItem('auth')
-    return raw ? (JSON.parse(raw) as { token: string }).token : null
-  } catch {
-    return null
-  }
+  return localStorage.getItem('auth')
 }

@@ -44,13 +44,15 @@ public class MqttMessageHandler {
                         container.setLatestFillLevel(telemetry.getFillLevel());
 
                         containerRepository.save(container);
-                        broadcaster.broadcast(new TelemetryEventDTO(
-                                telemetry.getContainerId(),
-                                telemetry.getFillLevel(),
-                                telemetry.getBatteryLevel()
-                        ));
 
                         if (oldLevel != telemetry.getFillLevel()) {
+
+                            broadcaster.broadcast(new TelemetryEventDTO(
+                                    telemetry.getContainerId(),
+                                    telemetry.getFillLevel(),
+                                    telemetry.getBatteryLevel()
+                            ));
+
                             telemetryRepository.save(
                                     new Telemetry(container,
                                             telemetry.getFillLevel(),
