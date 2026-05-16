@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faRecycle, faMapLocationDot, faRoute, faTrashCan, faBell,
@@ -6,12 +7,13 @@ import {
   faChevronRight, faFlask,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '../../context/AuthContext'
+import { useContainers } from '../../hooks/useContainers'
 
 const navItems = [
   { to: '/map', icon: faMapLocationDot, label: 'Map Overview' },
   { to: '/routes', icon: faRoute, label: 'Pickup Routes' },
   { to: '/containers', icon: faTrashCan, label: 'Containers' },
-  { to: '/alerts', icon: faBell, label: 'Alerts', badge: 3 },
+  { to: '/alerts', icon: faBell, label: 'Alerts' },
   { to: '/reports', icon: faChartPie, label: 'Reports' },
 ]
 
@@ -22,6 +24,12 @@ function initials(name: string) {
 export default function Sidebar() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { containers } = useContainers()
+
+  const alertCount = useMemo(
+    () => containers.filter(container => container.fillLevel >= 70 || container.status === 'offline').length,
+    [containers],
+  )
 
   function handleLogout() {
     logout()
@@ -64,32 +72,32 @@ export default function Sidebar() {
           </NavLink>
         </div>
 
-        {/* Nav Links */}
-        <nav className="flex-1 overflow-y-auto py-6 px-3 lg:px-4 space-y-1">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3 hidden lg:block">Menu</div>
-          {navItems.map((item) => (
-              <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-colors group ${
-                          isActive
-                              ? 'bg-green-50 text-green-600 border border-green-100'
-                              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                      }`
-                  }
-              >
-                {({ isActive }) => (
-                    <>
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                          isActive ? 'bg-green-500 text-white shadow-md' : 'group-hover:bg-white group-hover:shadow-sm'
-                      }`}>
-                        <FontAwesomeIcon icon={item.icon} />
-                      </div>
-                      <span className="hidden lg:block flex-1">{item.label}</span>
-                      {item.badge && (
-                          <span className="hidden lg:flex items-center justify-center bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
-                    {item.badge}
+      {/* Nav Links */}
+      <nav className="flex-1 overflow-y-auto py-6 px-3 lg:px-4 space-y-1">
+        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3 hidden lg:block">Menu</div>
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-colors group ${
+                isActive
+                  ? 'bg-green-50 text-green-600 border border-green-100'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                  isActive ? 'bg-green-500 text-white shadow-md' : 'group-hover:bg-white group-hover:shadow-sm'
+                }`}>
+                  <FontAwesomeIcon icon={item.icon} />
+                </div>
+                <span className="hidden lg:block flex-1">{item.label}</span>
+                {item.to === '/alerts' && alertCount > 0 && (
+                  <span className="hidden lg:flex items-center justify-center bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {alertCount}
                   </span>
                       )}
                     </>
