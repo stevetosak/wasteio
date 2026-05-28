@@ -1,10 +1,12 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFlask } from '@fortawesome/free-solid-svg-icons'
+import {faFlask, faLink} from '@fortawesome/free-solid-svg-icons'
 import { useContainers } from '../hooks/useContainers'
 import SimulatorPanel from '../components/containers/SimulatorPanel'
+import {useNavigate} from "react-router-dom";
 
 export default function SimulatorPage() {
   const { containers, refreshContainer } = useContainers()
+  const nav = useNavigate()
 
   return (
     <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
@@ -21,10 +23,16 @@ export default function SimulatorPage() {
           </div>
           <p className="text-sm text-gray-500 hidden sm:block">Control simulation parameters and trigger test events</p>
         </div>
+        <div className={"bg-purple-100 px-4 py-4 rounded-2xl flex items-center justify-between hover:bg-purple-200 shadow-md"}>
+          <FontAwesomeIcon icon={faLink} color={"purple"} className={"mx-2"}/>
+          <button className={"bold text-sm"} onClick={() => nav("/radar-sim")}>Radar Sensor Simulator</button>
+        </div>
+
       </header>
 
       <div className="p-4 sm:p-6 lg:p-8 max-w-4xl w-full">
         <SimulatorPanel containers={containers} onPickup={refreshContainer} />
+
       </div>
     </div>
   )
