@@ -62,7 +62,8 @@ public class SecurityConfig {
                                 "/auth/login",
                                 "/auth/register",
                                 "/auth/change-password",
-                                "/api/telemetry/stream"
+                                "/api/telemetry/stream",
+                                "/api/devices/register"
                         ).permitAll()
                         .requestMatchers("/error", "/health").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tosak.wasteio.wasteioapi.model.Container;
-import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
 import com.tosak.wasteio.wasteioapi.model.WasteType;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import lombok.Data;
@@ -53,7 +52,6 @@ public class ContainerSyncRunner implements ApplicationRunner {
                         existing.setWasteType(toWasteType(device.getWasteType()));
                         existing.setCapacity(device.getCapacityLiters());
                         existing.setLatestFillLevel(device.getFillLevel() != null ? device.getFillLevel() : 0.0);
-                        existing.setDeviceStatus(toDeviceStatus(device.getStatus()));
                         containerRepository.save(existing);
                         log.info("Updated container: {}", device.getContainerId());
                     },
@@ -67,7 +65,6 @@ public class ContainerSyncRunner implements ApplicationRunner {
                         container.setWasteType(toWasteType(device.getWasteType()));
                         container.setCapacity(device.getCapacityLiters());
                         container.setLatestFillLevel(device.getFillLevel() != null ? device.getFillLevel() : 0.0);
-                        container.setDeviceStatus(toDeviceStatus(device.getStatus()));
                         containerRepository.save(container);
                         log.info("Registered new container: {}", device.getContainerId());
                     }
@@ -87,16 +84,6 @@ public class ContainerSyncRunner implements ApplicationRunner {
             case "plastic" -> WasteType.PLASTIC;
             case "electronic" -> WasteType.ELECTRONIC;
             default -> null;
-        };
-    }
-
-    private DeviceStatus toDeviceStatus(String status) {
-        if (status == null) return DeviceStatus.ACTIVE;
-        return switch (status.toLowerCase()) {
-            case "active" -> DeviceStatus.ACTIVE;
-            case "maintenance" -> DeviceStatus.MAINTENANCE;
-            case "offline" -> DeviceStatus.OFFLINE;
-            default -> DeviceStatus.ACTIVE;
         };
     }
 

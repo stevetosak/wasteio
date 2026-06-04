@@ -22,7 +22,7 @@ export default function SimulatorPage() {
             </span>
           </div>
           <p className="text-sm text-gray-500 hidden sm:block">Control simulation parameters and trigger test events</p>
-        </div>
+      </div>
         <div className={"bg-purple-100 px-4 py-4 rounded-2xl flex items-center justify-between hover:bg-purple-200 shadow-md"}>
           <FontAwesomeIcon icon={faLink} color={"purple"} className={"mx-2"}/>
           <button className={"bold text-sm"} onClick={() => nav("/radar-sim")}>Radar Sensor Simulator</button>

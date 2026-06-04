@@ -1,0 +1,43 @@
+services:
+  wasteio-api:
+    build:
+      context: .
+      dockerfile: wasteio-api/Dockerfile
+    container_name: wasteio-api
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://psqldb_cont:5432
+      DB_NAME: wasteio
+      DB_USER: stevetosak
+      DB_PASS: Zim1M@jk41004
+      MQTT_BROKER_URL: tcp://wasteio-mosquitto:1883
+      MQTT_HOST: wasteio-mosquitto
+      MQTT_PORT: 1883
+      MQTT_USERNAME: wasteio-backend
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    networks:
+      - wasteio
+
+  wasteio-frontend:
+    build:
+      context: ./wasteio-frontend
+      dockerfile: Dockerfile
+    container_name: wasteio-frontend
+    restart: unless-stopped
+    environment:
+      API_URL: ""
+    ports:
+      - "5173:80"
+    volumes:
+      - ./nginx.docker.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - wasteio-api
+    networks:
+      - wasteio
+
+networks:
+  wasteio:
+    external: true

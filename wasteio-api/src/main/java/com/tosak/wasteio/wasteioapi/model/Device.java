@@ -3,8 +3,6 @@ package com.tosak.wasteio.wasteioapi.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.proxy.HibernateProxy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -14,41 +12,33 @@ import java.util.Objects;
 @Setter
 @ToString
 @RequiredArgsConstructor
-@Table(name = "containers")
-public class Container {
+@Table(name = "devices")
+public class Device {
+
     @Id
-    @Column(name = "container_id", nullable = false, unique = true)
+    @Column(name = "device_id", nullable = false)
     private String id;
 
-    @Column(name = "name", nullable = false)
-    private String name;
-
-    @Column(name = "longitude", nullable = false)
-    private double longitude;
-
-    @Column(name = "latitude", nullable = false)
-    private double latitude;
-
-    @Column(name = "latest_fill_level", nullable = false)
-    private double latestFillLevel = 0.0;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "container_id")
+    @ToString.Exclude
+    private Container container;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "waste_type")
-    private WasteType wasteType;
+    @Column(name = "device_status", nullable = false)
+    private DeviceStatus deviceStatus = DeviceStatus.ACTIVE;
 
-    @Column(name = "address")
-    private String address;
+    @Column(name = "mqtt_password_hash")
+    private String mqttPasswordHash;
 
-    @Column(name = "capacity")
-    private Integer capacity;
+    @Column(name = "registration_status", nullable = false)
+    private String registrationStatus = "PENDING";
 
-    @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(name = "updated_at")
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
+    @Column(name = "registered_at")
+    private LocalDateTime registeredAt;
 
     @Override
     public final boolean equals(Object o) {
@@ -57,7 +47,7 @@ public class Container {
         Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
         if (thisEffectiveClass != oEffectiveClass) return false;
-        Container that = (Container) o;
+        Device that = (Device) o;
         return getId() != null && Objects.equals(getId(), that.getId());
     }
 

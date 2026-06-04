@@ -20,7 +20,25 @@ func main() {
 	if v := os.Getenv("MQTT_BROKER_URL"); v != "" {
 		brokerDefault = v
 	}
+	apiDefault := "http://localhost:8080"
+	if v := os.Getenv("API_BASE_URL"); v != "" {
+		apiDefault = v
+	}
+	devicesPathDefault := "devices.json"
+	if v := os.Getenv("DEVICES_PATH"); v != "" {
+		devicesPathDefault = v
+	}
+	dataDirDefault := "/app/data"
+	if v := os.Getenv("DATA_DIR"); v != "" {
+		dataDirDefault = v
+	}
+
 	brokerURL := flag.String("broker", brokerDefault, "MQTT broker URL")
+	apiURL := flag.String("api-url", apiDefault, "Backend API base URL (used for device registration)")
+	devicesPath := flag.String("devices", devicesPathDefault, "Path to devices.json (multi-device mode)")
+	deviceID := flag.String("device-id", os.Getenv("DEVICE_ID"), "Single-device mode: device ID")
+	registrationToken := flag.String("registration-token", os.Getenv("REGISTRATION_TOKEN"), "Single-device mode: one-time registration token")
+	dataDir := flag.String("data-dir", dataDirDefault, "Single-device mode: directory for persisting credentials")
 	fillInterval := flag.Duration("fill-interval", 5*time.Minute, "how often fill level updates")
 	batteryInterval := flag.Duration("battery-interval", 1*time.Hour, "how often battery drains")
 	telemetryInterval := flag.Duration("telemetry-interval", 30*time.Second, "how often telemetry is published")
@@ -41,9 +59,50 @@ func main() {
 		BatteryDrainMax:   *batteryDrainMax,
 	})
 
-	devices, err := config.LoadDevices("devices.json")
-	if err != nil {
-		log.Fatalf("failed to load devices: %v", err)
+	var devices []config.DeviceConfig
+
+	if *deviceID != "" {
+		// Single-device mode: one container, one device, credentials persisted to dataDir.
+		log.Printf("single-device mode: device=%s", *deviceID)
+		cfg, err := config.LoadOrCreateSingleDevice(*deviceID, *registrationToken, *dataDir)
+		if err != nil {
+			log.Fatalf("failed to load device config: %v", err)
+		}
+
+		if err := device.Register(cfg, *apiURL); err != nil {
+			log.Printf("registration: %v", err)
+		} else if cfg.MqttUsername != "" {
+			if err := config.SaveSingleDeviceCredentials(cfg, *dataDir); err != nil {
+				log.Printf("warning: failed to persist credentials: %v", err)
+			}
+		}
+
+		devices = []config.DeviceConfig{*cfg}
+	} else {
+		// Multi-device mode: load all devices from devices.json.
+		log.Printf("multi-device mode: loading %s", *devicesPath)
+		var err error
+		devices, err = config.LoadDevices(*devicesPath)
+		if err != nil {
+			log.Fatalf("failed to load devices: %v", err)
+		}
+
+		credentialsDirty := false
+		for i := range devices {
+			if err := device.Register(&devices[i], *apiURL); err != nil {
+				log.Printf("registration failed for %s: %v", devices[i].ContainerID, err)
+			} else if devices[i].MqttUsername != "" {
+				credentialsDirty = true
+			}
+		}
+
+		if credentialsDirty {
+			if err := config.SaveDevices(*devicesPath, devices); err != nil {
+				log.Printf("warning: failed to persist credentials to %s: %v", *devicesPath, err)
+			} else {
+				log.Printf("credentials persisted to %s", *devicesPath)
+			}
+		}
 	}
 
 	controller.Start(*controlAddr, rtCfg)

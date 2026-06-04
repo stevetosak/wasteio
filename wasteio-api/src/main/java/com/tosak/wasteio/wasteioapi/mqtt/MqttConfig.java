@@ -24,6 +24,12 @@ public class MqttConfig {
     @Value("${mqtt.client.id}")
     private String clientId;
 
+    @Value("${mqtt.username}")
+    private String mqttUsername;
+
+    @Value("${mqtt.password}")
+    private String mqttPassword;
+
     @Value("${mqtt.topic.telemetry}")
     private String telemetryTopic;
 
@@ -37,6 +43,10 @@ public class MqttConfig {
         options.setServerURIs(new String[]{brokerUrl});
         options.setCleanSession(true);
         options.setAutomaticReconnect(true);
+        if (mqttUsername != null && !mqttUsername.isBlank()) {
+            options.setUserName(mqttUsername);
+            options.setPassword(mqttPassword.toCharArray());
+        }
         factory.setConnectionOptions(options);
         return factory;
     }
