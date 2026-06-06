@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -60,6 +61,28 @@ func LoadOrCreateSingleDevice(deviceID, registrationToken, dataDir string) (*Dev
 	return &DeviceConfig{
 		ContainerID:       deviceID,
 		RegistrationToken: registrationToken,
+	}, nil
+}
+
+// LoadSimDevice returns a DeviceConfig for swarm/sim mode.
+// On subsequent boots it reloads credentials from dataDir/credentials.json.
+// On first boot it derives the device ID from the container hostname.
+func LoadSimDevice(dataDir string) (*DeviceConfig, error) {
+	credPath := filepath.Join(dataDir, "credentials.json")
+	if data, err := os.ReadFile(credPath); err == nil {
+		var cfg DeviceConfig
+		if err := json.Unmarshal(data, &cfg); err == nil && cfg.MqttPassword != "" {
+			log.Printf("[%s] loaded sim credentials from %s", cfg.ContainerID, credPath)
+			return &cfg, nil
+		}
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get hostname for sim device ID: %w", err)
+	}
+	return &DeviceConfig{
+		ContainerID: "sim-" + hostname,
 	}, nil
 }
 

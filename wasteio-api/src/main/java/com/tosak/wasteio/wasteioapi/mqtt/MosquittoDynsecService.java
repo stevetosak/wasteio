@@ -67,6 +67,39 @@ public class MosquittoDynsecService {
         log.info("Dynsec: deleted client and role for device {}", deviceId);
     }
 
+    // Delete-then-recreate so it works whether the client already exists or not.
+    // Used by the sim registration path where credentials may need to be refreshed.
+    public void upsertDeviceClient(String deviceId, String plainPassword) {
+        String roleName = "device-" + deviceId + "-role";
+
+        Map<String, Object> deleteClient = Map.of("command", "deleteClient", "username", deviceId);
+        Map<String, Object> deleteRole = Map.of("command", "deleteRole", "rolename", roleName);
+        Map<String, Object> createRole = Map.of(
+                "command", "createRole",
+                "rolename", roleName,
+                "acls", List.of(
+                        Map.of("acltype", "publishClientSend",
+                                "topic", "waste/devices/" + deviceId + "/telemetry",
+                                "allow", true),
+                        Map.of("acltype", "publishClientSend",
+                                "topic", "waste/devices/" + deviceId + "/events",
+                                "allow", true),
+                        Map.of("acltype", "subscribeLiteral",
+                                "topic", "waste/devices/" + deviceId + "/commands",
+                                "allow", true)
+                )
+        );
+        Map<String, Object> createClient = Map.of(
+                "command", "createClient",
+                "username", deviceId,
+                "password", plainPassword,
+                "roles", List.of(Map.of("rolename", roleName, "priority", -1))
+        );
+
+        publish(Map.of("commands", List.of(deleteClient, deleteRole, createRole, createClient)));
+        log.info("Dynsec: upserted client and role for device {}", deviceId);
+    }
+
     private void publish(Map<String, Object> payload) {
         try {
             String json = objectMapper.writeValueAsString(payload);

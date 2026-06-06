@@ -101,6 +101,61 @@ func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
 	return nil
 }
 
+type simRegisterRequest struct {
+	DeviceID string `json:"deviceId"`
+}
+
+// SimRegister logs in as admin and calls /admin/devices/sim-register to obtain MQTT credentials.
+// If the device already has credentials (loaded from disk), it returns immediately.
+func SimRegister(cfg *config.DeviceConfig, apiBaseURL, adminEmail, adminPassword string) error {
+	if cfg.MqttPassword != "" {
+		return nil
+	}
+
+	loginURL := fmt.Sprintf("%s/auth/login?email=%s&password=%s",
+		apiBaseURL, adminEmail, adminPassword)
+	resp, err := http.Post(loginURL, "application/json", nil)
+	if err != nil {
+		return fmt.Errorf("[%s] login request failed: %w", cfg.ContainerID, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("[%s] login failed (HTTP %d): %s", cfg.ContainerID, resp.StatusCode, raw)
+	}
+	var loginResp struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&loginResp); err != nil {
+		return fmt.Errorf("[%s] failed to decode login response: %w", cfg.ContainerID, err)
+	}
+
+	body, _ := json.Marshal(simRegisterRequest{DeviceID: cfg.ContainerID})
+	req, _ := http.NewRequest("POST", apiBaseURL+"/admin/devices/sim-register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+loginResp.Token)
+
+	resp2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("[%s] sim-register request failed: %w", cfg.ContainerID, err)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp2.Body)
+		return fmt.Errorf("[%s] sim-register failed (HTTP %d): %s", cfg.ContainerID, resp2.StatusCode, raw)
+	}
+
+	var creds registerResponse
+	if err := json.NewDecoder(resp2.Body).Decode(&creds); err != nil {
+		return fmt.Errorf("[%s] failed to decode sim-register response: %w", cfg.ContainerID, err)
+	}
+
+	cfg.MqttUsername = creds.MqttUsername
+	cfg.MqttPassword = creds.MqttPassword
+	fmt.Printf("[%s] sim-registered successfully\n", cfg.ContainerID)
+	return nil
+}
+
 // connect creates the MQTT client, connects to the broker, and subscribes to the commands topic.
 func (d *Device) connect(brokerURL string) error {
 	opts := mqtt.NewClientOptions().

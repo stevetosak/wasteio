@@ -73,6 +73,38 @@ public class DeviceProvisioningService {
     }
 
     @Transactional
+    public DeviceCredentialsResponse simRegisterDevice(String deviceId) {
+        Device device = deviceRepository.findById(deviceId).orElse(null);
+        String mqttPassword = UUID.randomUUID().toString();
+
+        if (device == null) {
+            device = new Device();
+            device.setId(deviceId);
+            device.setDeviceStatus(DeviceStatus.ACTIVE);
+            device.setRegistrationStatus("SIM");
+            device.setCreatedAt(LocalDateTime.now());
+        } else {
+            device.setRegistrationStatus("SIM");
+        }
+
+        device.setMqttPasswordHash(passwordEncoder.encode(mqttPassword));
+        device.setRegisteredAt(LocalDateTime.now());
+        deviceRepository.save(device);
+
+        // upsert so this is idempotent — works on first boot and on credential refresh
+        dynsecService.upsertDeviceClient(deviceId, mqttPassword);
+
+        log.info("Sim device {} registered/refreshed", deviceId);
+
+        return new DeviceCredentialsResponse(
+                mqttHost, mqttPort, deviceId, mqttPassword,
+                "waste/devices/" + deviceId + "/telemetry",
+                "waste/devices/" + deviceId + "/events",
+                "waste/devices/" + deviceId + "/commands"
+        );
+    }
+
+    @Transactional
     public DeviceCredentialsResponse registerDevice(String deviceId, String submittedToken) {
         DeviceRegistrationToken tokenRecord = tokenRepository.findById(deviceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,

@@ -1,7 +1,9 @@
 package com.tosak.wasteio.wasteioapi.controller;
 
+import com.tosak.wasteio.wasteioapi.dto.DeviceCredentialsResponse;
 import com.tosak.wasteio.wasteioapi.dto.ProvisionRequest;
 import com.tosak.wasteio.wasteioapi.dto.ProvisionResponse;
+import com.tosak.wasteio.wasteioapi.dto.SimRegisterRequest;
 import com.tosak.wasteio.wasteioapi.dto.TokenResponse;
 import com.tosak.wasteio.wasteioapi.dto.UserResponse;
 import com.tosak.wasteio.wasteioapi.service.AuthService;
@@ -55,5 +57,12 @@ public class AdminController {
     public ResponseEntity<ProvisionResponse> provisionDevice(@RequestBody ProvisionRequest request) {
         String token = deviceProvisioningService.provisionDevice(request.getDeviceId());
         return ResponseEntity.ok(new ProvisionResponse(request.getDeviceId(), token));
+    }
+
+    @PostMapping("/devices/sim-register")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<DeviceCredentialsResponse> simRegisterDevice(@RequestBody SimRegisterRequest request) {
+        DeviceCredentialsResponse credentials = deviceProvisioningService.simRegisterDevice(request.getDeviceId());
+        return ResponseEntity.ok(credentials);
     }
 }
