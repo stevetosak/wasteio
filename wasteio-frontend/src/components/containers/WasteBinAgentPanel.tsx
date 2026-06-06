@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faTriangleExclamation, faRotateLeft, faTruck, faCheck, faBolt,
-  faArrowsRotate, faMicrochip, faChevronDown, faChevronUp,
+  faArrowsRotate, faMicrochip, faChevronDown, faChevronUp, faTrash,
 } from '@fortawesome/free-solid-svg-icons'
 import { useSimDevices } from '../../hooks/useSimDevices'
-import { pushDeviceConfig } from '../../lib/wasteBinAgentApi'
+import { pushDeviceConfig, clearOfflineSimDevices } from '../../lib/wasteBinAgentApi'
 import { triggerPickup } from '../../lib/simulatorApi'
 import type { SimulatorConfig } from '../../types/simulator'
 import type { Container } from '../../types/container'
@@ -103,6 +103,19 @@ export default function WasteBinAgentPanel({ containers }: Props) {
   const simContainers = containers.filter(c => simContainerIds.has(c.id))
 
   const [agentsCollapsed, setAgentsCollapsed] = useState(false)
+  const [clearing, setClearing] = useState(false)
+
+  const offlineCount = simContainers.filter(c => c.status === 'offline').length
+
+  async function handleClearOffline() {
+    setClearing(true)
+    try {
+      await clearOfflineSimDevices()
+      await load()
+    } finally {
+      setClearing(false)
+    }
+  }
 
   const [draft, setDraft] = useState<SimulatorConfig>({ ...DEFAULT_CONFIG })
   const [lastPushed, setLastPushed] = useState<Date | null>(null)
@@ -199,6 +212,16 @@ export default function WasteBinAgentPanel({ containers }: Props) {
               <span className="text-xs text-gray-400 hidden sm:inline">
                 Fetched at {lastFetched.toLocaleTimeString()}
               </span>
+            )}
+            {offlineCount > 0 && (
+              <button
+                onClick={handleClearOffline}
+                disabled={clearing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <FontAwesomeIcon icon={faTrash} />
+                Clear offline ({offlineCount})
+              </button>
             )}
             <button
               onClick={load}

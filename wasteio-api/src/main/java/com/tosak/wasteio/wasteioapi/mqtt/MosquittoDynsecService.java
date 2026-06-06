@@ -61,13 +61,19 @@ public class MosquittoDynsecService {
     }
 
     public void deleteDeviceClient(String deviceId) {
-        String roleName = "device-" + deviceId + "-role";
+        deleteDeviceClients(List.of(deviceId));
+    }
 
-        Map<String, Object> deleteClient = Map.of("command", "deleteClient", "username", deviceId);
-        Map<String, Object> deleteRole = Map.of("command", "deleteRole", "rolename", roleName);
-
-        publish(Map.of("commands", List.of(deleteClient, deleteRole)));
-        log.info("Dynsec: deleted client and role for device {}", deviceId);
+    public void deleteDeviceClients(List<String> deviceIds) {
+        if (deviceIds.isEmpty()) return;
+        List<Map<String, Object>> commands = deviceIds.stream()
+                .flatMap(id -> java.util.stream.Stream.of(
+                        Map.<String, Object>of("command", "deleteClient", "username", id),
+                        Map.<String, Object>of("command", "deleteRole", "rolename", "device-" + id + "-role")
+                ))
+                .toList();
+        publish(Map.of("commands", commands));
+        log.info("Dynsec: deleted {} client(s)", deviceIds.size());
     }
 
     // Delete-then-recreate so it works whether the client already exists or not.

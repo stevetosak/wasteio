@@ -99,4 +99,11 @@ public class AdminController {
     public void triggerHealthCheck() {
         healthCheckService.runHealthCheck();
     }
+
+    @DeleteMapping("/devices/sim/offline")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> clearOfflineSimDevices() {
+        containerDeviceService.clearOfflineSimDevices();
+        return ResponseEntity.noContent().build();
+    }
 }

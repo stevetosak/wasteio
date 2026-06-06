@@ -9,6 +9,7 @@ import com.tosak.wasteio.wasteioapi.model.Container;
 import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
 import com.tosak.wasteio.wasteioapi.model.Pickup;
 import com.tosak.wasteio.wasteioapi.model.Telemetry;
+import com.tosak.wasteio.wasteioapi.mqtt.MosquittoDynsecService;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import com.tosak.wasteio.wasteioapi.repository.DailyFillSnapshotRepository;
 import com.tosak.wasteio.wasteioapi.repository.DeviceRepository;
@@ -37,6 +38,7 @@ public class ContainerDeviceService {
     private final DeviceRepository deviceRepository;
     private final MessageChannel mqttOutboundChannel;
     private final ObjectMapper objectMapper;
+    private final MosquittoDynsecService dynsecService;
 
     public ContainerDeviceService(
             ContainerRepository repository,
@@ -45,7 +47,8 @@ public class ContainerDeviceService {
             DailyFillSnapshotRepository snapshotRepository,
             DeviceRepository deviceRepository,
             @Qualifier("mqttOutboundChannel") MessageChannel mqttOutboundChannel,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            MosquittoDynsecService dynsecService) {
         this.repository = repository;
         this.telemetryRepository = telemetryRepository;
         this.pickupRepository = pickupRepository;
@@ -53,6 +56,7 @@ public class ContainerDeviceService {
         this.deviceRepository = deviceRepository;
         this.mqttOutboundChannel = mqttOutboundChannel;
         this.objectMapper = objectMapper;
+        this.dynsecService = dynsecService;
     }
 
     public ContainerDTO addDevice(ContainerDTO dto) {
@@ -163,6 +167,29 @@ public class ContainerDeviceService {
                 .toList();
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public int clearOfflineSimDevices() {
+        List<com.tosak.wasteio.wasteioapi.model.Device> stale =
+                deviceRepository.findByRegistrationStatusAndDeviceStatus("SIM", DeviceStatus.OFFLINE);
+        if (stale.isEmpty()) return 0;
+
+        List<String> deviceIds = stale.stream()
+                .map(com.tosak.wasteio.wasteioapi.model.Device::getId).toList();
+        List<String> containerIds = stale.stream()
+                .filter(d -> d.getContainer() != null)
+                .map(d -> d.getContainer().getId()).toList();
+
+        // Batch DELETE WHERE id IN (...) — cascades telemetry/pickups/snapshots, nulls device.container_id
+        if (!containerIds.isEmpty()) repository.deleteAllByIdInBatch(containerIds);
+        // Batch DELETE WHERE device_id IN (...)
+        deviceRepository.deleteAllByIdInBatch(deviceIds);
+        // Single MQTT message with all delete commands
+        dynsecService.deleteDeviceClients(deviceIds);
+
+        log.info("Cleared {} offline sim device(s)", stale.size());
+        return stale.size();
+    }
+
     public void pushDeviceConfig(String deviceId, SimulatorConfigDTO config) {
         try {
             String payload = objectMapper.writeValueAsString(config);
@@ -170,7 +197,7 @@ public class ContainerDeviceService {
             Message<?> message = MessageBuilder.withPayload(payload)
                     .setHeader("mqtt_topic", topic)
                     .build();
-            boolean t=mqttOutboundChannel.send(message);
+            mqttOutboundChannel.send(message);
             log.info("Config pushed to device {} via MQTT", deviceId);
         } catch (Exception e) {
             log.error("Failed to push config to device {}", deviceId, e);

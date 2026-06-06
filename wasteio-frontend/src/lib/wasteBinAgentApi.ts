@@ -33,3 +33,7 @@ export async function pushDeviceConfig(deviceId: string, config: SimulatorConfig
 export async function triggerHealthCheck(): Promise<void> {
   await req<void>('/admin/devices/healthcheck', { method: 'POST' })
 }
+
+export async function clearOfflineSimDevices(): Promise<void> {
+  await req<void>('/admin/devices/sim/offline', { method: 'DELETE' })
+}
