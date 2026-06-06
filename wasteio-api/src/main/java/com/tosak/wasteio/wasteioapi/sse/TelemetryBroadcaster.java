@@ -47,14 +47,23 @@ public class TelemetryBroadcaster {
     }
 
     public void broadcast(TelemetryEventDTO event) {
+        send(SseEmitter.event()
+                .id(String.valueOf(System.currentTimeMillis()))
+                .name("telemetry")
+                .data(event));
+    }
+
+    public void broadcastStatus(String containerId, String status) {
+        send(SseEmitter.event()
+                .id(String.valueOf(System.currentTimeMillis()))
+                .name("status")
+                .data(new StatusEventDTO(containerId, status)));
+    }
+
+    private void send(SseEmitter.SseEventBuilder built) {
         if (emitters.isEmpty()) return;
 
         List<SseEmitter> dead = new ArrayList<>();
-        SseEmitter.SseEventBuilder built = SseEmitter.event()
-                .id(String.valueOf(System.currentTimeMillis())) // enables Last-Event-ID
-                .name("telemetry")
-                .data(event);
-
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(built);

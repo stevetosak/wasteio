@@ -29,3 +29,7 @@ export async function pushDeviceConfig(deviceId: string, config: SimulatorConfig
     body: JSON.stringify(config),
   })
 }
+
+export async function triggerHealthCheck(): Promise<void> {
+  await req<void>('/admin/devices/healthcheck', { method: 'POST' })
+}

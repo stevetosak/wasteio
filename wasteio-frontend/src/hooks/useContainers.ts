@@ -6,6 +6,7 @@ import {
   updateContainerApi,
   deleteContainerApi,
   getContainerByIdApi,
+  fromApiStatus,
 } from '../lib/containerApi'
 import { envConfig } from '../config/env'
 import { useTelemetryStream } from './useTelemetryStream'
@@ -162,10 +163,23 @@ export function useContainers() {
     }
   }, [])
 
+  const handleStatusMessage = useCallback((data: string) => {
+    try {
+      const { containerId, status } = JSON.parse(data) as { containerId: string; status: string }
+      const mapped = fromApiStatus[status] ?? 'offline'
+      setLiveContainers(prev =>
+        prev.map(c => c.id === containerId ? { ...c, status: mapped } : c)
+      )
+    } catch {
+      // malformed status event — ignore
+    }
+  }, [])
+
   const { status: streamStatus, attempt: streamAttempt, error: streamError, retry: retryStream } = useTelemetryStream(
     `${envConfig.API_URL}/telemetry/stream`,
     handleTelemetryMessage,
     !isDemo,
+    handleStatusMessage,
   )
 
   function toggleDemo() {

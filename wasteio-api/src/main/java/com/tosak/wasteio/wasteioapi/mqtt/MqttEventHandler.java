@@ -1,27 +1,41 @@
 package com.tosak.wasteio.wasteioapi.mqtt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
 import com.tosak.wasteio.wasteioapi.model.Pickup;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import com.tosak.wasteio.wasteioapi.repository.DeviceRepository;
 import com.tosak.wasteio.wasteioapi.repository.PickupRepository;
-import lombok.RequiredArgsConstructor;
+import com.tosak.wasteio.wasteioapi.sse.TelemetryBroadcaster;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class MqttEventHandler {
 
     private final ContainerRepository containerRepository;
     private final DeviceRepository deviceRepository;
     private final PickupRepository pickupRepository;
     private final ObjectMapper objectMapper;
+    private final TelemetryBroadcaster broadcaster;
+
+    public MqttEventHandler(ContainerRepository containerRepository,
+                            DeviceRepository deviceRepository,
+                            PickupRepository pickupRepository,
+                            ObjectMapper objectMapper,
+                            TelemetryBroadcaster broadcaster) {
+        this.containerRepository = containerRepository;
+        this.deviceRepository = deviceRepository;
+        this.pickupRepository = pickupRepository;
+        this.objectMapper = objectMapper;
+        this.broadcaster = broadcaster;
+    }
 
     @ServiceActivator(inputChannel = "mqttEventsChannel")
     public void handleEvent(Message<String> message) {
@@ -34,6 +48,8 @@ public class MqttEventHandler {
 
             if ("emptied".equals(event.getEventType())) {
                 handleEmptied(deviceId, event);
+            } else if ("healthcheck-ack".equals(event.getEventType())) {
+                handleHealthCheckAck(deviceId);
             } else {
                 log.warn("Unhandled event type '{}' from device {}", event.getEventType(), deviceId);
             }
@@ -67,6 +83,18 @@ public class MqttEventHandler {
                 },
                 () -> log.warn("Device not found for emptied event: {}", deviceId)
         );
+    }
+
+    private void handleHealthCheckAck(String deviceId) {
+        deviceRepository.findById(deviceId).ifPresentOrElse(device -> {
+            device.setLastSeenAt(LocalDateTime.now());
+            device.setDeviceStatus(DeviceStatus.ACTIVE);
+            deviceRepository.save(device);
+            if (device.getContainer() != null) {
+                broadcaster.broadcastStatus(device.getContainer().getId(), "ACTIVE");
+            }
+            log.info("Device {} is ACTIVE (healthcheck-ack received)", deviceId);
+        }, () -> log.warn("healthcheck-ack from unknown device: {}", deviceId));
     }
 
     private String extractSegment(String topic, int index) {

@@ -35,10 +35,11 @@ const fromApiWasteType: Record<string, WasteType> = {
   ELECTRONIC: 'hazardous',
 }
 
-const fromApiStatus: Record<string, ContainerStatus> = {
+export const fromApiStatus: Record<string, ContainerStatus> = {
   ACTIVE: 'active',
   MAINTENANCE: 'maintenance',
   OFFLINE: 'offline',
+  IDLE: 'idle',
 }
 
 

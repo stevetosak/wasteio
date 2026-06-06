@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -195,7 +196,13 @@ func (d *Device) connect(brokerURL string, rtCfg *config.RuntimeConfig) error {
 	}
 
 	commandTopic := fmt.Sprintf("waste/devices/%s/commands", d.cfg.DeviceID)
-	token := d.client.Subscribe(commandTopic, 1, func(_ mqtt.Client, _ mqtt.Message) {
+	token := d.client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		payload := strings.TrimSpace(string(msg.Payload()))
+		if payload == "healthcheck" {
+			fmt.Printf("[%s] healthcheck received, publishing ack\n", d.cfg.DeviceID)
+			d.publishEvent("healthcheck-ack")
+			return
+		}
 		select {
 		case d.pickupCh <- struct{}{}:
 		default:

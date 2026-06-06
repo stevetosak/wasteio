@@ -55,9 +55,10 @@ public class DeviceProvisioningService {
         Device device = deviceRepository.findById(deviceId).orElseGet(() -> {
             Device d = new Device();
             d.setId(deviceId);
-            d.setDeviceStatus(DeviceStatus.ACTIVE);
+            d.setDeviceStatus(DeviceStatus.IDLE);
             d.setRegistrationStatus("PENDING");
             d.setCreatedAt(LocalDateTime.now());
+            d.setLastSeenAt(LocalDateTime.now());
             return deviceRepository.save(d);
         });
 
@@ -90,9 +91,10 @@ public class DeviceProvisioningService {
         if (device == null) {
             device = new Device();
             device.setId(deviceId);
-            device.setDeviceStatus(DeviceStatus.ACTIVE);
+            device.setDeviceStatus(DeviceStatus.IDLE);
             device.setRegistrationStatus("SIM");
             device.setCreatedAt(LocalDateTime.now());
+            device.setLastSeenAt(LocalDateTime.now());
         } else {
             device.setRegistrationStatus("SIM");
         }

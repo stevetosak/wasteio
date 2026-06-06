@@ -10,7 +10,9 @@ import com.tosak.wasteio.wasteioapi.dto.TokenResponse;
 import com.tosak.wasteio.wasteioapi.dto.UserResponse;
 import com.tosak.wasteio.wasteioapi.service.AuthService;
 import com.tosak.wasteio.wasteioapi.service.ContainerDeviceService;
+import com.tosak.wasteio.wasteioapi.service.DeviceHealthCheckService;
 import com.tosak.wasteio.wasteioapi.service.DeviceProvisioningService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -27,12 +29,15 @@ public class AdminController {
     private final AuthService authService;
     private final DeviceProvisioningService deviceProvisioningService;
     private final ContainerDeviceService containerDeviceService;
+    private final DeviceHealthCheckService healthCheckService;
 
     public AdminController(AuthService authService, DeviceProvisioningService deviceProvisioningService,
-                           ContainerDeviceService containerDeviceService) {
+                           ContainerDeviceService containerDeviceService,
+                           DeviceHealthCheckService healthCheckService) {
         this.authService = authService;
         this.deviceProvisioningService = deviceProvisioningService;
         this.containerDeviceService = containerDeviceService;
+        this.healthCheckService = healthCheckService;
     }
 
     @PostMapping("/generate-token")
@@ -86,5 +91,12 @@ public class AdminController {
                                                   @RequestBody SimulatorConfigDTO config) {
         containerDeviceService.pushDeviceConfig(deviceId, config);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/devices/healthcheck")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void triggerHealthCheck() {
+        healthCheckService.runHealthCheck();
     }
 }

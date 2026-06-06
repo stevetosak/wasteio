@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { SimDevice } from '../types/simDevice'
-import { fetchSimDevices } from '../lib/wasteBinAgentApi'
+import { fetchSimDevices, triggerHealthCheck } from '../lib/wasteBinAgentApi'
 
 export function useSimDevices() {
   const [devices, setDevices] = useState<SimDevice[]>([])
@@ -14,6 +14,7 @@ export function useSimDevices() {
     try {
       setDevices(await fetchSimDevices())
       setLastFetched(new Date())
+      triggerHealthCheck().catch(() => {})
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to fetch sim devices')
     } finally {

@@ -26,7 +26,10 @@ public class Device {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "device_status", nullable = false)
-    private DeviceStatus deviceStatus = DeviceStatus.ACTIVE;
+    private DeviceStatus deviceStatus = DeviceStatus.IDLE;
+
+    @Column(name = "last_seen_at")
+    private LocalDateTime lastSeenAt;
 
     @Column(name = "mqtt_password_hash")
     private String mqttPasswordHash;
