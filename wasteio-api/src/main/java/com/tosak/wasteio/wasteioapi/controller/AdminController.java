@@ -3,15 +3,20 @@ package com.tosak.wasteio.wasteioapi.controller;
 import com.tosak.wasteio.wasteioapi.dto.DeviceCredentialsResponse;
 import com.tosak.wasteio.wasteioapi.dto.ProvisionRequest;
 import com.tosak.wasteio.wasteioapi.dto.ProvisionResponse;
+import com.tosak.wasteio.wasteioapi.dto.SimDeviceDTO;
 import com.tosak.wasteio.wasteioapi.dto.SimRegisterRequest;
+import com.tosak.wasteio.wasteioapi.dto.SimulatorConfigDTO;
 import com.tosak.wasteio.wasteioapi.dto.TokenResponse;
 import com.tosak.wasteio.wasteioapi.dto.UserResponse;
 import com.tosak.wasteio.wasteioapi.service.AuthService;
+import com.tosak.wasteio.wasteioapi.service.ContainerDeviceService;
 import com.tosak.wasteio.wasteioapi.service.DeviceProvisioningService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 import java.util.List;
 
@@ -21,10 +26,13 @@ public class AdminController {
 
     private final AuthService authService;
     private final DeviceProvisioningService deviceProvisioningService;
+    private final ContainerDeviceService containerDeviceService;
 
-    public AdminController(AuthService authService, DeviceProvisioningService deviceProvisioningService) {
+    public AdminController(AuthService authService, DeviceProvisioningService deviceProvisioningService,
+                           ContainerDeviceService containerDeviceService) {
         this.authService = authService;
         this.deviceProvisioningService = deviceProvisioningService;
+        this.containerDeviceService = containerDeviceService;
     }
 
     @PostMapping("/generate-token")
@@ -62,7 +70,21 @@ public class AdminController {
     @PostMapping("/devices/sim-register")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<DeviceCredentialsResponse> simRegisterDevice(@RequestBody SimRegisterRequest request) {
-        DeviceCredentialsResponse credentials = deviceProvisioningService.simRegisterDevice(request.getDeviceId());
+        DeviceCredentialsResponse credentials = deviceProvisioningService.simRegisterDevice(request);
         return ResponseEntity.ok(credentials);
+    }
+
+    @GetMapping("/devices/sim")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<SimDeviceDTO> listSimDevices() {
+        return containerDeviceService.listSimDevices();
+    }
+
+    @PostMapping("/devices/{deviceId}/config")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> pushDeviceConfig(@PathVariable String deviceId,
+                                                  @RequestBody SimulatorConfigDTO config) {
+        containerDeviceService.pushDeviceConfig(deviceId, config);
+        return ResponseEntity.noContent().build();
     }
 }

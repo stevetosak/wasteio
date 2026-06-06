@@ -60,7 +60,7 @@ func main() {
 	credentialsDirty := false
 	for i := range devices {
 		if err := device.Register(&devices[i], *apiURL); err != nil {
-			log.Printf("registration failed for %s: %v", devices[i].ContainerID, err)
+			log.Printf("registration failed for %s: %v", devices[i].DeviceID, err)
 		} else if devices[i].MqttUsername != "" {
 			credentialsDirty = true
 		}

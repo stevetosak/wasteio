@@ -42,6 +42,9 @@ public class MosquittoDynsecService {
                                 "allow", true),
                         Map.of("acltype", "subscribeLiteral",
                                 "topic", "waste/devices/" + deviceId + "/commands",
+                                "allow", true),
+                        Map.of("acltype", "subscribeLiteral",
+                                "topic", "waste/devices/" + deviceId + "/config",
                                 "allow", true)
                 )
         );
@@ -86,6 +89,9 @@ public class MosquittoDynsecService {
                                 "allow", true),
                         Map.of("acltype", "subscribeLiteral",
                                 "topic", "waste/devices/" + deviceId + "/commands",
+                                "allow", true),
+                        Map.of("acltype", "subscribeLiteral",
+                                "topic", "waste/devices/" + deviceId + "/config",
                                 "allow", true)
                 )
         );

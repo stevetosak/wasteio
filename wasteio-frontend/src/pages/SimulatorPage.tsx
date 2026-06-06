@@ -1,12 +1,17 @@
+import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {faFlask, faLink} from '@fortawesome/free-solid-svg-icons'
+import { faFlask, faLink, faMicrochip, faServer } from '@fortawesome/free-solid-svg-icons'
 import { useContainers } from '../hooks/useContainers'
 import SimulatorPanel from '../components/containers/SimulatorPanel'
-import {useNavigate} from "react-router-dom";
+import WasteBinAgentPanel from '../components/containers/WasteBinAgentPanel'
+import { useNavigate } from 'react-router-dom'
+
+type Tab = 'classic' | 'agent'
 
 export default function SimulatorPage() {
   const { containers, refreshContainer } = useContainers()
   const nav = useNavigate()
+  const [tab, setTab] = useState<Tab>('classic')
 
   return (
     <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
@@ -22,16 +27,46 @@ export default function SimulatorPage() {
             </span>
           </div>
           <p className="text-sm text-gray-500 hidden sm:block">Control simulation parameters and trigger test events</p>
-      </div>
-        <div className={"bg-purple-100 px-4 py-4 rounded-2xl flex items-center justify-between hover:bg-purple-200 shadow-md"}>
-          <FontAwesomeIcon icon={faLink} color={"purple"} className={"mx-2"}/>
-          <button className={"bold text-sm"} onClick={() => nav("/radar-sim")}>Radar Sensor Simulator</button>
         </div>
-
+        <div className="bg-purple-100 px-4 py-4 rounded-2xl flex items-center justify-between hover:bg-purple-200 shadow-md">
+          <FontAwesomeIcon icon={faLink} color="purple" className="mx-2" />
+          <button className="bold text-sm" onClick={() => nav('/radar-sim')}>Radar Sensor Simulator</button>
+        </div>
       </header>
 
-      <div className="p-4 sm:p-6 lg:p-8 max-w-4xl w-full">
-        <SimulatorPanel containers={containers} onPickup={refreshContainer} />
+      <div className="p-4 sm:p-6 lg:p-8 max-w-4xl w-full flex flex-col gap-6">
+
+        {/* ── Tab toggle ────────────────────────────────────────────── */}
+        <div className="flex gap-1 p-1 bg-white rounded-2xl border border-gray-200 shadow-sm w-fit">
+          <button
+            onClick={() => setTab('classic')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              tab === 'classic'
+                ? 'bg-gray-900 text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <FontAwesomeIcon icon={faServer} />
+            Classic Simulator
+          </button>
+          <button
+            onClick={() => setTab('agent')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              tab === 'agent'
+                ? 'bg-gray-900 text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <FontAwesomeIcon icon={faMicrochip} />
+            Waste-bin-agent
+          </button>
+        </div>
+
+        {tab === 'classic' ? (
+          <SimulatorPanel containers={containers} onPickup={refreshContainer} />
+        ) : (
+          <WasteBinAgentPanel containers={containers} />
+        )}
 
       </div>
     </div>

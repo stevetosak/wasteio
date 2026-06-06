@@ -4,9 +4,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 )
+
+// Skopje bounding box
+const (
+	skopjeLatMin = 41.970
+	skopjeLatMax = 42.040
+	skopjeLngMin = 21.380
+	skopjeLngMax = 21.510
+)
+
+func randomSkopjeLocation() Location {
+	return Location{
+		Lat: skopjeLatMin + rand.Float64()*(skopjeLatMax-skopjeLatMin),
+		Lng: skopjeLngMin + rand.Float64()*(skopjeLngMax-skopjeLngMin),
+	}
+}
 
 type Location struct {
 	Lat float64 `json:"lat"`
@@ -14,7 +30,7 @@ type Location struct {
 }
 
 type DeviceConfig struct {
-	ContainerID       string   `json:"containerId"`
+	DeviceID          string   `json:"deviceId"`
 	Location          Location `json:"location"`
 	RegistrationToken string   `json:"registrationToken,omitempty"`
 	MqttUsername      string   `json:"mqttUsername,omitempty"`
@@ -36,12 +52,12 @@ func LoadSimDevice(dataDir string) (*DeviceConfig, string, error) {
 	if data, err := os.ReadFile(credPath); err == nil {
 		var cfg DeviceConfig
 		if err := json.Unmarshal(data, &cfg); err == nil && cfg.MqttPassword != "" {
-			log.Printf("[%s] loaded credentials from %s", cfg.ContainerID, credPath)
+			log.Printf("[%s] loaded credentials from %s", cfg.DeviceID, credPath)
 			return &cfg, effectiveDir, nil
 		}
 	}
 
-	return &DeviceConfig{ContainerID: deviceID}, effectiveDir, nil
+	return &DeviceConfig{DeviceID: deviceID, Location: randomSkopjeLocation()}, effectiveDir, nil
 }
 
 // LoadOrCreate loads persisted credentials from dataDir/credentials.json if present,
@@ -51,12 +67,12 @@ func LoadOrCreate(deviceID, registrationToken, dataDir string) (*DeviceConfig, e
 	if data, err := os.ReadFile(credPath); err == nil {
 		var cfg DeviceConfig
 		if err := json.Unmarshal(data, &cfg); err == nil && cfg.MqttPassword != "" {
-			log.Printf("[%s] loaded credentials from %s", cfg.ContainerID, credPath)
+			log.Printf("[%s] loaded credentials from %s", cfg.DeviceID, credPath)
 			return &cfg, nil
 		}
 	}
 	return &DeviceConfig{
-		ContainerID:       deviceID,
+		DeviceID:       deviceID,
 		RegistrationToken: registrationToken,
 	}, nil
 }

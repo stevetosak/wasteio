@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface DeviceRepository extends JpaRepository<Device, String> {
     List<Device> findByContainer_Id(String containerId);
+    List<Device> findByRegistrationStatus(String registrationStatus);
 }

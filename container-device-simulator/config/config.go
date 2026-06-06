@@ -11,7 +11,7 @@ type Location struct {
 }
 
 type DeviceConfig struct {
-	ContainerID       string   `json:"containerId"`
+	DeviceID          string   `json:"deviceId"`
 	Location          Location `json:"location"`
 	RegistrationToken string   `json:"registrationToken,omitempty"`
 	MqttUsername      string   `json:"mqttUsername,omitempty"`

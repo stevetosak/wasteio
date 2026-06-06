@@ -16,7 +16,7 @@ import (
 )
 
 type Telemetry struct {
-	ContainerID string          `json:"containerId"`
+	DeviceID string          `json:"deviceId"`
 	FillLevel   float64         `json:"fillLevel"`
 	Battery     float64         `json:"batteryLevel"`
 	Timestamp   time.Time       `json:"timestamp"`
@@ -24,7 +24,7 @@ type Telemetry struct {
 }
 
 type Event struct {
-	ContainerID string    `json:"containerId"`
+	DeviceID string    `json:"deviceId"`
 	EventType   string    `json:"eventType"`
 	FillLevel   float64   `json:"fillLevel"`
 	Timestamp   time.Time `json:"timestamp"`
@@ -44,7 +44,9 @@ type registerResponse struct {
 }
 
 type simRegisterRequest struct {
-	DeviceID string `json:"deviceId"`
+	DeviceID  string  `json:"deviceId"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 type Device struct {
@@ -71,11 +73,11 @@ func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
 		return nil
 	}
 	if cfg.RegistrationToken == "" {
-		return fmt.Errorf("[%s] no registration token set, skipping registration", cfg.ContainerID)
+		return fmt.Errorf("[%s] no registration token set, skipping registration", cfg.DeviceID)
 	}
 
 	body, err := json.Marshal(registerRequest{
-		DeviceID:          cfg.ContainerID,
+		DeviceID:          cfg.DeviceID,
 		RegistrationToken: cfg.RegistrationToken,
 	})
 	if err != nil {
@@ -84,24 +86,24 @@ func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
 
 	resp, err := http.Post(apiBaseURL+"/api/devices/register", "application/json", bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("[%s] registration request failed: %w", cfg.ContainerID, err)
+		return fmt.Errorf("[%s] registration request failed: %w", cfg.DeviceID, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		raw, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("[%s] registration failed (HTTP %d): %s", cfg.ContainerID, resp.StatusCode, raw)
+		return fmt.Errorf("[%s] registration failed (HTTP %d): %s", cfg.DeviceID, resp.StatusCode, raw)
 	}
 
 	var creds registerResponse
 	if err := json.NewDecoder(resp.Body).Decode(&creds); err != nil {
-		return fmt.Errorf("[%s] failed to decode registration response: %w", cfg.ContainerID, err)
+		return fmt.Errorf("[%s] failed to decode registration response: %w", cfg.DeviceID, err)
 	}
 
 	cfg.MqttUsername = creds.MqttUsername
 	cfg.MqttPassword = creds.MqttPassword
 	cfg.RegistrationToken = ""
-	fmt.Printf("[%s] registered successfully\n", cfg.ContainerID)
+	fmt.Printf("[%s] registered successfully\n", cfg.DeviceID)
 	return nil
 }
 
@@ -116,43 +118,47 @@ func SimRegister(cfg *config.DeviceConfig, apiBaseURL, adminEmail, adminPassword
 		apiBaseURL, adminEmail, adminPassword)
 	resp, err := http.Post(loginURL, "application/json", nil)
 	if err != nil {
-		return fmt.Errorf("[%s] login request failed: %w", cfg.ContainerID, err)
+		return fmt.Errorf("[%s] login request failed: %w", cfg.DeviceID, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		raw, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("[%s] login failed (HTTP %d): %s", cfg.ContainerID, resp.StatusCode, raw)
+		return fmt.Errorf("[%s] login failed (HTTP %d): %s", cfg.DeviceID, resp.StatusCode, raw)
 	}
 	var loginResp struct {
 		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&loginResp); err != nil {
-		return fmt.Errorf("[%s] failed to decode login response: %w", cfg.ContainerID, err)
+		return fmt.Errorf("[%s] failed to decode login response: %w", cfg.DeviceID, err)
 	}
 
-	body, _ := json.Marshal(simRegisterRequest{DeviceID: cfg.ContainerID})
+	body, _ := json.Marshal(simRegisterRequest{
+		DeviceID:  cfg.DeviceID,
+		Latitude:  cfg.Location.Lat,
+		Longitude: cfg.Location.Lng,
+	})
 	req, _ := http.NewRequest("POST", apiBaseURL+"/admin/devices/sim-register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+loginResp.Token)
 
 	resp2, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("[%s] sim-register request failed: %w", cfg.ContainerID, err)
+		return fmt.Errorf("[%s] sim-register request failed: %w", cfg.DeviceID, err)
 	}
 	defer resp2.Body.Close()
 	if resp2.StatusCode != http.StatusOK {
 		raw, _ := io.ReadAll(resp2.Body)
-		return fmt.Errorf("[%s] sim-register failed (HTTP %d): %s", cfg.ContainerID, resp2.StatusCode, raw)
+		return fmt.Errorf("[%s] sim-register failed (HTTP %d): %s", cfg.DeviceID, resp2.StatusCode, raw)
 	}
 
 	var creds registerResponse
 	if err := json.NewDecoder(resp2.Body).Decode(&creds); err != nil {
-		return fmt.Errorf("[%s] failed to decode sim-register response: %w", cfg.ContainerID, err)
+		return fmt.Errorf("[%s] failed to decode sim-register response: %w", cfg.DeviceID, err)
 	}
 
 	cfg.MqttUsername = creds.MqttUsername
 	cfg.MqttPassword = creds.MqttPassword
-	fmt.Printf("[%s] sim-registered successfully\n", cfg.ContainerID)
+	fmt.Printf("[%s] sim-registered successfully\n", cfg.DeviceID)
 	return nil
 }
 
@@ -173,7 +179,7 @@ type configUpdate struct {
 func (d *Device) connect(brokerURL string, rtCfg *config.RuntimeConfig) error {
 	opts := mqtt.NewClientOptions().
 		AddBroker(brokerURL).
-		SetClientID("simulator-" + d.cfg.ContainerID).
+		SetClientID("simulator-" + d.cfg.DeviceID).
 		SetCleanSession(true).
 		SetAutoReconnect(true)
 
@@ -188,7 +194,7 @@ func (d *Device) connect(brokerURL string, rtCfg *config.RuntimeConfig) error {
 		return token.Error()
 	}
 
-	commandTopic := fmt.Sprintf("waste/devices/%s/commands", d.cfg.ContainerID)
+	commandTopic := fmt.Sprintf("waste/devices/%s/commands", d.cfg.DeviceID)
 	token := d.client.Subscribe(commandTopic, 1, func(_ mqtt.Client, _ mqtt.Message) {
 		select {
 		case d.pickupCh <- struct{}{}:
@@ -200,33 +206,41 @@ func (d *Device) connect(brokerURL string, rtCfg *config.RuntimeConfig) error {
 		return err
 	}
 
-	configTopic := fmt.Sprintf("waste/devices/%s/config", d.cfg.ContainerID)
+	configTopic := fmt.Sprintf("waste/devices/%s/config", d.cfg.DeviceID)
 	cfgToken := d.client.Subscribe(configTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		fmt.Printf("[%s] config message received: %s\n", d.cfg.DeviceID, msg.Payload())
 		var u configUpdate
 		if err := json.Unmarshal(msg.Payload(), &u); err != nil {
-			fmt.Printf("[%s] invalid config message: %v\n", d.cfg.ContainerID, err)
+			fmt.Printf("[%s] invalid config message: %v\n", d.cfg.DeviceID, err)
 			return
 		}
 		snap := rtCfg.Snapshot()
 		if u.FillInterval != "" {
 			if dur, err := time.ParseDuration(u.FillInterval); err == nil && dur > 0 {
+				fmt.Printf("[%s] fillInterval: %v -> %v\n", d.cfg.DeviceID, snap.FillInterval, dur)
 				snap.FillInterval = dur
+			} else if err != nil {
+				fmt.Printf("[%s] bad fillInterval %q: %v\n", d.cfg.DeviceID, u.FillInterval, err)
 			}
 		}
 		if u.BatteryInterval != "" {
 			if dur, err := time.ParseDuration(u.BatteryInterval); err == nil && dur > 0 {
+				fmt.Printf("[%s] batteryInterval: %v -> %v\n", d.cfg.DeviceID, snap.BatteryInterval, dur)
 				snap.BatteryInterval = dur
 			}
 		}
 		if u.TelemetryInterval != "" {
 			if dur, err := time.ParseDuration(u.TelemetryInterval); err == nil && dur > 0 {
+				fmt.Printf("[%s] telemetryInterval: %v -> %v\n", d.cfg.DeviceID, snap.TelemetryInterval, dur)
 				snap.TelemetryInterval = dur
 			}
 		}
 		if u.FillRateMin > 0 {
+			fmt.Printf("[%s] fillRateMin: %v -> %v\n", d.cfg.DeviceID, snap.FillRateMin, u.FillRateMin)
 			snap.FillRateMin = u.FillRateMin
 		}
 		if u.FillRateMax > 0 {
+			fmt.Printf("[%s] fillRateMax: %v -> %v\n", d.cfg.DeviceID, snap.FillRateMax, u.FillRateMax)
 			snap.FillRateMax = u.FillRateMax
 		}
 		if u.BatteryDrainMin > 0 {
@@ -236,10 +250,15 @@ func (d *Device) connect(brokerURL string, rtCfg *config.RuntimeConfig) error {
 			snap.BatteryDrainMax = u.BatteryDrainMax
 		}
 		rtCfg.Update(snap)
-		fmt.Printf("[%s] config updated via MQTT\n", d.cfg.ContainerID)
+		fmt.Printf("[%s] config applied\n", d.cfg.DeviceID)
 	})
 	cfgToken.Wait()
-	return cfgToken.Error()
+	if err := cfgToken.Error(); err != nil {
+		// Non-fatal: device runs but won't receive runtime config updates.
+		// Most likely cause: dynsec subscribe ACL missing — re-register the device.
+		fmt.Printf("[%s] WARNING: config topic subscription failed: %v — runtime config updates disabled\n", d.cfg.DeviceID, err)
+	}
+	return nil
 }
 
 func (d *Device) updateFill(snap config.ConfigSnapshot) {
@@ -262,7 +281,7 @@ func round2(f float64) float64 {
 
 func (d *Device) buildPayload() ([]byte, error) {
 	t := Telemetry{
-		ContainerID: d.cfg.ContainerID,
+		DeviceID: d.cfg.DeviceID,
 		FillLevel:   round2(d.fillLevel),
 		Battery:     round2(d.battery),
 		Timestamp:   time.Now().UTC(),
@@ -274,49 +293,47 @@ func (d *Device) buildPayload() ([]byte, error) {
 func (d *Device) publishTelemetry(topic string) {
 	payload, err := d.buildPayload()
 	if err != nil {
-		fmt.Printf("[%s] marshal error: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] marshal error: %v\n", d.cfg.DeviceID, err)
 		return
 	}
 	token := d.client.Publish(topic, 0, false, payload)
 	token.Wait()
 	if token.Error() != nil {
-		fmt.Printf("[%s] publish error: %v\n", d.cfg.ContainerID, token.Error())
+		fmt.Printf("[%s] publish error: %v\n", d.cfg.DeviceID, token.Error())
 		return
 	}
-	fmt.Printf("[%s] published: %s\n", d.cfg.ContainerID, payload)
+	fmt.Printf("[%s] published: %s\n", d.cfg.DeviceID, payload)
 }
 
 func (d *Device) publishEvent(eventType string) {
-	topic := fmt.Sprintf("waste/devices/%s/events", d.cfg.ContainerID)
+	topic := fmt.Sprintf("waste/devices/%s/events", d.cfg.DeviceID)
 	payload, err := json.Marshal(Event{
-		ContainerID: d.cfg.ContainerID,
+		DeviceID: d.cfg.DeviceID,
 		EventType:   eventType,
 		FillLevel:   round2(d.fillLevel),
 		Timestamp:   time.Now().UTC(),
 	})
 	if err != nil {
-		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.DeviceID, err)
 		return
 	}
 	token := d.client.Publish(topic, 1, false, payload)
 	token.Wait()
 	if token.Error() != nil {
-		fmt.Printf("[%s] event publish error: %v\n", d.cfg.ContainerID, token.Error())
+		fmt.Printf("[%s] event publish error: %v\n", d.cfg.DeviceID, token.Error())
 	}
 }
 
 func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.RuntimeConfig) {
 	if err := d.connect(brokerURL, rtCfg); err != nil {
-		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.DeviceID, err)
 		return
 	}
 	defer d.client.Disconnect(250)
 
-	telemetryTopic := fmt.Sprintf("waste/devices/%s/telemetry", d.cfg.ContainerID)
+	telemetryTopic := fmt.Sprintf("waste/devices/%s/telemetry", d.cfg.DeviceID)
 
-	snap := rtCfg.Snapshot()
-
-	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.DeviceID, d.fillLevel)
 	d.publishTelemetry(telemetryTopic)
 
 	select {
@@ -325,7 +342,10 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 		return
 	}
 
+	// Subscribe after the jitter so any config update that arrived during
+	// the jitter window is already in rtCfg when we take the snapshot below.
 	changes := rtCfg.Subscribe()
+	snap := rtCfg.Snapshot()
 
 	fillInterval := snap.FillInterval
 	batteryInterval := snap.BatteryInterval
@@ -341,25 +361,28 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("[%s] shutting down...\n", d.cfg.ContainerID)
+			fmt.Printf("[%s] shutting down...\n", d.cfg.DeviceID)
 			return
 
 		case <-d.pickupCh:
 			d.fillLevel *= 0.15 + rand.Float64()*0.1
-			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.DeviceID, d.fillLevel)
 			d.publishEvent("emptied")
 
 		case <-changes:
 			snap = rtCfg.Snapshot()
 			if snap.FillInterval != fillInterval {
+				fmt.Printf("[%s] fill ticker: %v -> %v\n", d.cfg.DeviceID, fillInterval, snap.FillInterval)
 				fillInterval = snap.FillInterval
 				fillTicker.Reset(fillInterval)
 			}
 			if snap.BatteryInterval != batteryInterval {
+				fmt.Printf("[%s] battery ticker: %v -> %v\n", d.cfg.DeviceID, batteryInterval, snap.BatteryInterval)
 				batteryInterval = snap.BatteryInterval
 				batteryTicker.Reset(batteryInterval)
 			}
 			if snap.TelemetryInterval != telemetryInterval {
+				fmt.Printf("[%s] telemetry ticker: %v -> %v\n", d.cfg.DeviceID, telemetryInterval, snap.TelemetryInterval)
 				telemetryInterval = snap.TelemetryInterval
 				jitter := time.Duration(rand.Int63n(int64(telemetryInterval)))
 				telemetryTicker.Reset(jitter + 1)

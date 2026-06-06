@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
 
@@ -28,6 +29,7 @@ public class MqttMessageHandler {
     private final TelemetryBroadcaster broadcaster;
     private final ObjectMapper objectMapper;
 
+    @Transactional
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public void handleMessage(Message<String> message) {
         try {

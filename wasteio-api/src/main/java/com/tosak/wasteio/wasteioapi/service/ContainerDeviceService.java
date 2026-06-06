@@ -1,7 +1,10 @@
 package com.tosak.wasteio.wasteioapi.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tosak.wasteio.wasteioapi.dto.ContainerDTO;
 import com.tosak.wasteio.wasteioapi.dto.FillSnapshotDTO;
+import com.tosak.wasteio.wasteioapi.dto.SimDeviceDTO;
+import com.tosak.wasteio.wasteioapi.dto.SimulatorConfigDTO;
 import com.tosak.wasteio.wasteioapi.model.Container;
 import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
 import com.tosak.wasteio.wasteioapi.model.Pickup;
@@ -33,6 +36,7 @@ public class ContainerDeviceService {
     private final DailyFillSnapshotRepository snapshotRepository;
     private final DeviceRepository deviceRepository;
     private final MessageChannel mqttOutboundChannel;
+    private final ObjectMapper objectMapper;
 
     public ContainerDeviceService(
             ContainerRepository repository,
@@ -40,13 +44,15 @@ public class ContainerDeviceService {
             PickupRepository pickupRepository,
             DailyFillSnapshotRepository snapshotRepository,
             DeviceRepository deviceRepository,
-            @Qualifier("mqttOutboundChannel") MessageChannel mqttOutboundChannel) {
+            @Qualifier("mqttOutboundChannel") MessageChannel mqttOutboundChannel,
+            ObjectMapper objectMapper) {
         this.repository = repository;
         this.telemetryRepository = telemetryRepository;
         this.pickupRepository = pickupRepository;
         this.snapshotRepository = snapshotRepository;
         this.deviceRepository = deviceRepository;
         this.mqttOutboundChannel = mqttOutboundChannel;
+        this.objectMapper = objectMapper;
     }
 
     public ContainerDTO addDevice(ContainerDTO dto) {
@@ -134,6 +140,42 @@ public class ContainerDeviceService {
                 .stream()
                 .map(s -> new FillSnapshotDTO(s.getSnapshotDate().toString(), s.getFillLevel()))
                 .toList();
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<SimDeviceDTO> listSimDevices() {
+        return deviceRepository.findByRegistrationStatus("SIM").stream()
+                .filter(device -> device.getContainer() != null)
+                .map(device -> {
+                    var container = device.getContainer();
+                    double batteryLevel = telemetryRepository
+                            .findTopByContainerIdOrderByRecordedAtDesc(container.getId())
+                            .map(Telemetry::getBatteryLevel)
+                            .orElse(0.0);
+                    return new SimDeviceDTO(
+                            device.getId(),
+                            container.getId(),
+                            container.getName(),
+                            container.getLatestFillLevel(),
+                            batteryLevel
+                    );
+                })
+                .toList();
+    }
+
+    public void pushDeviceConfig(String deviceId, SimulatorConfigDTO config) {
+        try {
+            String payload = objectMapper.writeValueAsString(config);
+            String topic = "waste/devices/" + deviceId + "/config";
+            Message<?> message = MessageBuilder.withPayload(payload)
+                    .setHeader("mqtt_topic", topic)
+                    .build();
+            boolean t=mqttOutboundChannel.send(message);
+            log.info("Config pushed to device {} via MQTT", deviceId);
+        } catch (Exception e) {
+            log.error("Failed to push config to device {}", deviceId, e);
+            throw new RuntimeException("Failed to push config to device " + deviceId, e);
+        }
     }
 
     private Container fromDTO(ContainerDTO dto) {

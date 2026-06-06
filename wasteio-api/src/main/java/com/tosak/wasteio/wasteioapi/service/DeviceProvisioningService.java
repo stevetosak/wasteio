@@ -1,10 +1,13 @@
 package com.tosak.wasteio.wasteioapi.service;
 
 import com.tosak.wasteio.wasteioapi.dto.DeviceCredentialsResponse;
+import com.tosak.wasteio.wasteioapi.dto.SimRegisterRequest;
+import com.tosak.wasteio.wasteioapi.model.Container;
 import com.tosak.wasteio.wasteioapi.model.Device;
 import com.tosak.wasteio.wasteioapi.model.DeviceRegistrationToken;
 import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
 import com.tosak.wasteio.wasteioapi.mqtt.MosquittoDynsecService;
+import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import com.tosak.wasteio.wasteioapi.repository.DeviceRegistrationTokenRepository;
 import com.tosak.wasteio.wasteioapi.repository.DeviceRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +27,7 @@ public class DeviceProvisioningService {
 
     private final DeviceRepository deviceRepository;
     private final DeviceRegistrationTokenRepository tokenRepository;
+    private final ContainerRepository containerRepository;
     private final MosquittoDynsecService dynsecService;
     private final BCryptPasswordEncoder passwordEncoder;
 
@@ -36,10 +40,12 @@ public class DeviceProvisioningService {
     public DeviceProvisioningService(
             DeviceRepository deviceRepository,
             DeviceRegistrationTokenRepository tokenRepository,
+            ContainerRepository containerRepository,
             MosquittoDynsecService dynsecService,
             BCryptPasswordEncoder passwordEncoder) {
         this.deviceRepository = deviceRepository;
         this.tokenRepository = tokenRepository;
+        this.containerRepository = containerRepository;
         this.dynsecService = dynsecService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -73,7 +79,11 @@ public class DeviceProvisioningService {
     }
 
     @Transactional
-    public DeviceCredentialsResponse simRegisterDevice(String deviceId) {
+    public DeviceCredentialsResponse simRegisterDevice(SimRegisterRequest request) {
+        String deviceId = request.getDeviceId();
+        double lat = request.getLatitude() != null ? request.getLatitude() : 0.0;
+        double lng = request.getLongitude() != null ? request.getLongitude() : 0.0;
+
         Device device = deviceRepository.findById(deviceId).orElse(null);
         String mqttPassword = UUID.randomUUID().toString();
 
@@ -85,6 +95,21 @@ public class DeviceProvisioningService {
             device.setCreatedAt(LocalDateTime.now());
         } else {
             device.setRegistrationStatus("SIM");
+        }
+
+        if (device.getContainer() == null) {
+            String containerId = "sim-container-" + deviceId;
+            Container container = containerRepository.findById(containerId).orElseGet(() -> {
+                Container c = new Container();
+                c.setId(containerId);
+                c.setName("Sim [" + deviceId + "]");
+                c.setLatitude(lat);
+                c.setLongitude(lng);
+                c.setLatestFillLevel(0.0);
+                c.setAddress("Simulation");
+                return containerRepository.save(c);
+            });
+            device.setContainer(container);
         }
 
         device.setMqttPasswordHash(passwordEncoder.encode(mqttPassword));

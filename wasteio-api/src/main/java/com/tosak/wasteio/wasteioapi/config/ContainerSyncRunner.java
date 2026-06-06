@@ -43,7 +43,7 @@ public class ContainerSyncRunner implements ApplicationRunner {
         );
 
         for (DeviceRecord device : devices) {
-            containerRepository.findById(device.getContainerId()).ifPresentOrElse(
+            containerRepository.findById(device.getDeviceId()).ifPresentOrElse(
                     existing -> {
                         existing.setName(device.getName());
                         existing.setAddress(device.getAddress());
@@ -53,12 +53,12 @@ public class ContainerSyncRunner implements ApplicationRunner {
                         existing.setCapacity(device.getCapacityLiters());
                         existing.setLatestFillLevel(device.getFillLevel() != null ? device.getFillLevel() : 0.0);
                         containerRepository.save(existing);
-                        log.info("Updated container: {}", device.getContainerId());
+                        log.info("Updated container: {}", device.getDeviceId());
                     },
                     () -> {
                         Container container = new Container();
-                        container.setId(device.getContainerId());
-                        container.setName(device.getName() != null ? device.getName() : toDisplayName(device.getContainerId()));
+                        container.setId(device.getDeviceId());
+                        container.setName(device.getName() != null ? device.getName() : toDisplayName(device.getDeviceId()));
                         container.setAddress(device.getAddress());
                         container.setLatitude(device.getLocation().getLat());
                         container.setLongitude(device.getLocation().getLng());
@@ -66,7 +66,7 @@ public class ContainerSyncRunner implements ApplicationRunner {
                         container.setCapacity(device.getCapacityLiters());
                         container.setLatestFillLevel(device.getFillLevel() != null ? device.getFillLevel() : 0.0);
                         containerRepository.save(container);
-                        log.info("Registered new container: {}", device.getContainerId());
+                        log.info("Registered new container: {}", device.getDeviceId());
                     }
             );
         }
@@ -96,8 +96,8 @@ public class ContainerSyncRunner implements ApplicationRunner {
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
     static class DeviceRecord {
-        @JsonProperty("containerId")
-        private String containerId;
+        @JsonProperty("deviceId")
+        private String deviceId;
 
         @JsonProperty("name")
         private String name;

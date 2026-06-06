@@ -16,7 +16,7 @@ import (
 )
 
 type Telemetry struct {
-	ContainerID string          `json:"containerId"`
+	DeviceID string          `json:"deviceId"`
 	FillLevel   float64         `json:"fillLevel"`
 	Battery     float64         `json:"batteryLevel"`
 	Timestamp   time.Time       `json:"timestamp"`
@@ -24,7 +24,7 @@ type Telemetry struct {
 }
 
 type Event struct {
-	ContainerID string    `json:"containerId"`
+	DeviceID string    `json:"deviceId"`
 	EventType   string    `json:"eventType"`
 	FillLevel   float64   `json:"fillLevel"`
 	Timestamp   time.Time `json:"timestamp"`
@@ -67,11 +67,11 @@ func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
 		return nil
 	}
 	if cfg.RegistrationToken == "" {
-		return fmt.Errorf("[%s] no registration token set, skipping registration", cfg.ContainerID)
+		return fmt.Errorf("[%s] no registration token set, skipping registration", cfg.DeviceID)
 	}
 
 	body, err := json.Marshal(registerRequest{
-		DeviceID:          cfg.ContainerID,
+		DeviceID:          cfg.DeviceID,
 		RegistrationToken: cfg.RegistrationToken,
 	})
 	if err != nil {
@@ -80,24 +80,24 @@ func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
 
 	resp, err := http.Post(apiBaseURL+"/api/devices/register", "application/json", bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("[%s] registration request failed: %w", cfg.ContainerID, err)
+		return fmt.Errorf("[%s] registration request failed: %w", cfg.DeviceID, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		raw, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("[%s] registration failed (HTTP %d): %s", cfg.ContainerID, resp.StatusCode, raw)
+		return fmt.Errorf("[%s] registration failed (HTTP %d): %s", cfg.DeviceID, resp.StatusCode, raw)
 	}
 
 	var creds registerResponse
 	if err := json.NewDecoder(resp.Body).Decode(&creds); err != nil {
-		return fmt.Errorf("[%s] failed to decode registration response: %w", cfg.ContainerID, err)
+		return fmt.Errorf("[%s] failed to decode registration response: %w", cfg.DeviceID, err)
 	}
 
 	cfg.MqttUsername = creds.MqttUsername
 	cfg.MqttPassword = creds.MqttPassword
 	cfg.RegistrationToken = ""
-	fmt.Printf("[%s] registered successfully\n", cfg.ContainerID)
+	fmt.Printf("[%s] registered successfully\n", cfg.DeviceID)
 	return nil
 }
 
@@ -105,7 +105,7 @@ func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
 func (d *Device) connect(brokerURL string) error {
 	opts := mqtt.NewClientOptions().
 		AddBroker(brokerURL).
-		SetClientID("simulator-" + d.cfg.ContainerID).
+		SetClientID("simulator-" + d.cfg.DeviceID).
 		SetCleanSession(true).
 		SetAutoReconnect(true)
 
@@ -120,7 +120,7 @@ func (d *Device) connect(brokerURL string) error {
 		return token.Error()
 	}
 
-	commandTopic := fmt.Sprintf("waste/devices/%s/commands", d.cfg.ContainerID)
+	commandTopic := fmt.Sprintf("waste/devices/%s/commands", d.cfg.DeviceID)
 
 	token := d.client.Subscribe(commandTopic, 1, func(_ mqtt.Client, _ mqtt.Message) {
 		select {
@@ -152,7 +152,7 @@ func round2(f float64) float64 {
 
 func (d *Device) buildPayload() ([]byte, error) {
 	t := Telemetry{
-		ContainerID: d.cfg.ContainerID,
+		DeviceID: d.cfg.DeviceID,
 		FillLevel:   round2(d.fillLevel),
 		Battery:     round2(d.battery),
 		Timestamp:   time.Now().UTC(),
@@ -164,49 +164,49 @@ func (d *Device) buildPayload() ([]byte, error) {
 func (d *Device) publishTelemetry(topic string) {
 	payload, err := d.buildPayload()
 	if err != nil {
-		fmt.Printf("[%s] marshal error: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] marshal error: %v\n", d.cfg.DeviceID, err)
 		return
 	}
 	token := d.client.Publish(topic, 0, false, payload)
 	token.Wait()
 	if token.Error() != nil {
-		fmt.Printf("[%s] publish error: %v\n", d.cfg.ContainerID, token.Error())
+		fmt.Printf("[%s] publish error: %v\n", d.cfg.DeviceID, token.Error())
 		return
 	}
-	fmt.Printf("[%s] published: %s\n", d.cfg.ContainerID, payload)
+	fmt.Printf("[%s] published: %s\n", d.cfg.DeviceID, payload)
 }
 
 func (d *Device) publishEvent(eventType string) {
-	topic := fmt.Sprintf("waste/devices/%s/events", d.cfg.ContainerID)
+	topic := fmt.Sprintf("waste/devices/%s/events", d.cfg.DeviceID)
 	payload, err := json.Marshal(Event{
-		ContainerID: d.cfg.ContainerID,
+		DeviceID: d.cfg.DeviceID,
 		EventType:   eventType,
 		FillLevel:   round2(d.fillLevel),
 		Timestamp:   time.Now().UTC(),
 	})
 	if err != nil {
-		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.DeviceID, err)
 		return
 	}
 	token := d.client.Publish(topic, 1, false, payload)
 	token.Wait()
 	if token.Error() != nil {
-		fmt.Printf("[%s] event publish error: %v\n", d.cfg.ContainerID, token.Error())
+		fmt.Printf("[%s] event publish error: %v\n", d.cfg.DeviceID, token.Error())
 	}
 }
 
 func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.RuntimeConfig) {
 	if err := d.connect(brokerURL); err != nil {
-		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.DeviceID, err)
 		return
 	}
 	defer d.client.Disconnect(250)
 
-	telemetryTopic := fmt.Sprintf("waste/devices/%s/telemetry", d.cfg.ContainerID)
+	telemetryTopic := fmt.Sprintf("waste/devices/%s/telemetry", d.cfg.DeviceID)
 
 	snap := rtCfg.Snapshot()
 
-	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.DeviceID, d.fillLevel)
 	d.publishTelemetry(telemetryTopic)
 
 	select {
@@ -231,12 +231,12 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("[%s] shutting down...\n", d.cfg.ContainerID)
+			fmt.Printf("[%s] shutting down...\n", d.cfg.DeviceID)
 			return
 
 		case <-d.pickupCh:
 			d.fillLevel *= 0.15 + rand.Float64()*0.1
-			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.DeviceID, d.fillLevel)
 			d.publishEvent("emptied")
 
 		case <-changes:

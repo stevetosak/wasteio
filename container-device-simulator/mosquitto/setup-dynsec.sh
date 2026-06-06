@@ -29,6 +29,7 @@ $CTRL dynsec addRoleACL wasteio-backend-role publishClientSend '$CONTROL/dynamic
 $CTRL dynsec addRoleACL wasteio-backend-role subscribePattern 'waste/devices/+/telemetry' allow
 $CTRL dynsec addRoleACL wasteio-backend-role subscribePattern 'waste/devices/+/events' allow
 $CTRL dynsec addRoleACL wasteio-backend-role publishClientSend 'waste/devices/+/commands' allow
+$CTRL dynsec addRoleACL wasteio-backend-role publishClientSend 'waste/devices/+/config' allow
 
 echo "Assigning role to wasteio-backend..."
 $CTRL dynsec addClientRole wasteio-backend wasteio-backend-role
