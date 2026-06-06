@@ -12,7 +12,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/stevetosak/wasteio/container-device-simulator/config"
+	"github.com/stevetosak/wasteio/waste-bin-agent/config"
 )
 
 type Telemetry struct {
@@ -41,6 +41,10 @@ type registerResponse struct {
 	MqttUsername   string `json:"mqttUsername"`
 	MqttPassword   string `json:"mqttPassword"`
 	TelemetryTopic string `json:"telemetryTopic"`
+}
+
+type simRegisterRequest struct {
+	DeviceID string `json:"deviceId"`
 }
 
 type Device struct {
@@ -101,8 +105,72 @@ func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
 	return nil
 }
 
+// SimRegister logs in as admin and calls /admin/devices/sim-register to obtain MQTT credentials.
+// If the device already has credentials (loaded from disk), it returns immediately.
+func SimRegister(cfg *config.DeviceConfig, apiBaseURL, adminEmail, adminPassword string) error {
+	if cfg.MqttPassword != "" {
+		return nil
+	}
+
+	loginURL := fmt.Sprintf("%s/auth/login?email=%s&password=%s",
+		apiBaseURL, adminEmail, adminPassword)
+	resp, err := http.Post(loginURL, "application/json", nil)
+	if err != nil {
+		return fmt.Errorf("[%s] login request failed: %w", cfg.ContainerID, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("[%s] login failed (HTTP %d): %s", cfg.ContainerID, resp.StatusCode, raw)
+	}
+	var loginResp struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&loginResp); err != nil {
+		return fmt.Errorf("[%s] failed to decode login response: %w", cfg.ContainerID, err)
+	}
+
+	body, _ := json.Marshal(simRegisterRequest{DeviceID: cfg.ContainerID})
+	req, _ := http.NewRequest("POST", apiBaseURL+"/admin/devices/sim-register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+loginResp.Token)
+
+	resp2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("[%s] sim-register request failed: %w", cfg.ContainerID, err)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp2.Body)
+		return fmt.Errorf("[%s] sim-register failed (HTTP %d): %s", cfg.ContainerID, resp2.StatusCode, raw)
+	}
+
+	var creds registerResponse
+	if err := json.NewDecoder(resp2.Body).Decode(&creds); err != nil {
+		return fmt.Errorf("[%s] failed to decode sim-register response: %w", cfg.ContainerID, err)
+	}
+
+	cfg.MqttUsername = creds.MqttUsername
+	cfg.MqttPassword = creds.MqttPassword
+	fmt.Printf("[%s] sim-registered successfully\n", cfg.ContainerID)
+	return nil
+}
+
+// configUpdate is the shape of a runtime config patch received over MQTT.
+// All fields are optional — zero value means "leave unchanged".
+// Durations are Go duration strings (e.g. "5s", "2m").
+type configUpdate struct {
+	FillInterval      string  `json:"fillInterval"`
+	BatteryInterval   string  `json:"batteryInterval"`
+	TelemetryInterval string  `json:"telemetryInterval"`
+	FillRateMin       float64 `json:"fillRateMin"`
+	FillRateMax       float64 `json:"fillRateMax"`
+	BatteryDrainMin   float64 `json:"batteryDrainMin"`
+	BatteryDrainMax   float64 `json:"batteryDrainMax"`
+}
+
 // connect creates the MQTT client, connects to the broker, and subscribes to the commands topic.
-func (d *Device) connect(brokerURL string) error {
+func (d *Device) connect(brokerURL string, rtCfg *config.RuntimeConfig) error {
 	opts := mqtt.NewClientOptions().
 		AddBroker(brokerURL).
 		SetClientID("simulator-" + d.cfg.ContainerID).
@@ -121,7 +189,6 @@ func (d *Device) connect(brokerURL string) error {
 	}
 
 	commandTopic := fmt.Sprintf("waste/devices/%s/commands", d.cfg.ContainerID)
-
 	token := d.client.Subscribe(commandTopic, 1, func(_ mqtt.Client, _ mqtt.Message) {
 		select {
 		case d.pickupCh <- struct{}{}:
@@ -129,7 +196,50 @@ func (d *Device) connect(brokerURL string) error {
 		}
 	})
 	token.Wait()
-	return token.Error()
+	if err := token.Error(); err != nil {
+		return err
+	}
+
+	configTopic := fmt.Sprintf("waste/devices/%s/config", d.cfg.ContainerID)
+	cfgToken := d.client.Subscribe(configTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		var u configUpdate
+		if err := json.Unmarshal(msg.Payload(), &u); err != nil {
+			fmt.Printf("[%s] invalid config message: %v\n", d.cfg.ContainerID, err)
+			return
+		}
+		snap := rtCfg.Snapshot()
+		if u.FillInterval != "" {
+			if dur, err := time.ParseDuration(u.FillInterval); err == nil && dur > 0 {
+				snap.FillInterval = dur
+			}
+		}
+		if u.BatteryInterval != "" {
+			if dur, err := time.ParseDuration(u.BatteryInterval); err == nil && dur > 0 {
+				snap.BatteryInterval = dur
+			}
+		}
+		if u.TelemetryInterval != "" {
+			if dur, err := time.ParseDuration(u.TelemetryInterval); err == nil && dur > 0 {
+				snap.TelemetryInterval = dur
+			}
+		}
+		if u.FillRateMin > 0 {
+			snap.FillRateMin = u.FillRateMin
+		}
+		if u.FillRateMax > 0 {
+			snap.FillRateMax = u.FillRateMax
+		}
+		if u.BatteryDrainMin > 0 {
+			snap.BatteryDrainMin = u.BatteryDrainMin
+		}
+		if u.BatteryDrainMax > 0 {
+			snap.BatteryDrainMax = u.BatteryDrainMax
+		}
+		rtCfg.Update(snap)
+		fmt.Printf("[%s] config updated via MQTT\n", d.cfg.ContainerID)
+	})
+	cfgToken.Wait()
+	return cfgToken.Error()
 }
 
 func (d *Device) updateFill(snap config.ConfigSnapshot) {
@@ -196,7 +306,7 @@ func (d *Device) publishEvent(eventType string) {
 }
 
 func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.RuntimeConfig) {
-	if err := d.connect(brokerURL); err != nil {
+	if err := d.connect(brokerURL, rtCfg); err != nil {
 		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.ContainerID, err)
 		return
 	}

@@ -1,0 +1,31 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: wasteio-mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ../container-device-simulator/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ../container-device-simulator/mosquitto/data:/mosquitto/data
+      - ../container-device-simulator/mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  device:
+    build: .
+    depends_on:
+      - mosquitto
+    environment:
+      SIM_MODE: "true"
+      MQTT_BROKER_URL: tcp://mosquitto:1883
+      DATA_DIR: /app/data
+      API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:8080}
+      SIM_ADMIN_EMAIL: ${SIM_ADMIN_EMAIL}
+      SIM_ADMIN_PASSWORD: ${SIM_ADMIN_PASSWORD}
+    volumes:
+      - device-data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  device-data:
