@@ -17,18 +17,18 @@ import (
 )
 
 type Telemetry struct {
-	DeviceID string          `json:"deviceId"`
-	FillLevel   float64         `json:"fillLevel"`
-	Battery     float64         `json:"batteryLevel"`
-	Timestamp   time.Time       `json:"timestamp"`
-	Location    config.Location `json:"location"`
+	DeviceID  string          `json:"deviceId"`
+	FillLevel float64         `json:"fillLevel"`
+	Battery   float64         `json:"batteryLevel"`
+	Timestamp time.Time       `json:"timestamp"`
+	Location  config.Location `json:"location"`
 }
 
 type Event struct {
-	DeviceID string    `json:"deviceId"`
-	EventType   string    `json:"eventType"`
-	FillLevel   float64   `json:"fillLevel"`
-	Timestamp   time.Time `json:"timestamp"`
+	DeviceID  string    `json:"deviceId"`
+	EventType string    `json:"eventType"`
+	FillLevel float64   `json:"fillLevel"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type registerRequest struct {
@@ -288,11 +288,11 @@ func round2(f float64) float64 {
 
 func (d *Device) buildPayload() ([]byte, error) {
 	t := Telemetry{
-		DeviceID: d.cfg.DeviceID,
-		FillLevel:   round2(d.fillLevel),
-		Battery:     round2(d.battery),
-		Timestamp:   time.Now().UTC(),
-		Location:    d.cfg.Location,
+		DeviceID:  d.cfg.DeviceID,
+		FillLevel: round2(d.fillLevel),
+		Battery:   round2(d.battery),
+		Timestamp: time.Now().UTC(),
+		Location:  d.cfg.Location,
 	}
 	return json.Marshal(t)
 }
@@ -315,10 +315,10 @@ func (d *Device) publishTelemetry(topic string) {
 func (d *Device) publishEvent(eventType string) {
 	topic := fmt.Sprintf("waste/devices/%s/events", d.cfg.DeviceID)
 	payload, err := json.Marshal(Event{
-		DeviceID: d.cfg.DeviceID,
-		EventType:   eventType,
-		FillLevel:   round2(d.fillLevel),
-		Timestamp:   time.Now().UTC(),
+		DeviceID:  d.cfg.DeviceID,
+		EventType: eventType,
+		FillLevel: round2(d.fillLevel),
+		Timestamp: time.Now().UTC(),
 	})
 	if err != nil {
 		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.DeviceID, err)
@@ -349,9 +349,7 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 		return
 	}
 
-	// Subscribe after the jitter so any config update that arrived during
-	// the jitter window is already in rtCfg when we take the snapshot below.
-	changes := rtCfg.Subscribe()
+	changes := rtCfg.Changes()
 	snap := rtCfg.Snapshot()
 
 	fillInterval := snap.FillInterval

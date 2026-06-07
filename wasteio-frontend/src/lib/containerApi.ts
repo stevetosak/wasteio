@@ -76,7 +76,13 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     },
     ...init,
   })
-  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`)
+  if (!res.ok) {
+    const body = await res.text()
+    if (import.meta.env.DEV) throw new Error(`API ${res.status}: ${body}`)
+    let message = `Request failed (${res.status})`
+    try { const json = JSON.parse(body); if (json.message) message = json.message } catch { /* not JSON */ }
+    throw new Error(message)
+  }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }

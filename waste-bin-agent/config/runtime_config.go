@@ -16,13 +16,16 @@ type ConfigSnapshot struct {
 }
 
 type RuntimeConfig struct {
-	mu       sync.RWMutex
-	cfg      ConfigSnapshot
-	watchers []chan struct{}
+	mu      sync.RWMutex
+	cfg     ConfigSnapshot
+	changes chan struct{}
 }
 
 func NewRuntimeConfig(snap ConfigSnapshot) *RuntimeConfig {
-	return &RuntimeConfig{cfg: snap}
+	return &RuntimeConfig{
+		cfg:     snap,
+		changes: make(chan struct{}, 1),
+	}
 }
 
 func (rc *RuntimeConfig) Snapshot() ConfigSnapshot {
@@ -33,23 +36,16 @@ func (rc *RuntimeConfig) Snapshot() ConfigSnapshot {
 
 func (rc *RuntimeConfig) Update(snap ConfigSnapshot) {
 	rc.mu.Lock()
-	defer rc.mu.Unlock()
 	rc.cfg = snap
-	for _, ch := range rc.watchers {
-		select {
-		case ch <- struct{}{}:
-		default:
-		}
+	rc.mu.Unlock()
+	select {
+	case rc.changes <- struct{}{}:
+	default:
 	}
 }
 
-// Subscribe returns a per-device channel that receives a notification on
-// every Update. Each device must call Subscribe to get its own channel —
-// a shared channel would only deliver each notification to one device.
-func (rc *RuntimeConfig) Subscribe() <-chan struct{} {
-	ch := make(chan struct{}, 1)
-	rc.mu.Lock()
-	rc.watchers = append(rc.watchers, ch)
-	rc.mu.Unlock()
-	return ch
+// Changes returns the notification channel. The device reads from it to know
+// when to re-snapshot and reset its tickers.
+func (rc *RuntimeConfig) Changes() <-chan struct{} {
+	return rc.changes
 }

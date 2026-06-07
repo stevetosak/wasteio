@@ -2,10 +2,7 @@ package com.tosak.wasteio.wasteioapi.service;
 
 import com.tosak.wasteio.wasteioapi.dto.DeviceCredentialsResponse;
 import com.tosak.wasteio.wasteioapi.dto.SimRegisterRequest;
-import com.tosak.wasteio.wasteioapi.model.Container;
-import com.tosak.wasteio.wasteioapi.model.Device;
-import com.tosak.wasteio.wasteioapi.model.DeviceRegistrationToken;
-import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
+import com.tosak.wasteio.wasteioapi.model.*;
 import com.tosak.wasteio.wasteioapi.mqtt.MosquittoDynsecService;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import com.tosak.wasteio.wasteioapi.repository.DeviceRegistrationTokenRepository;
@@ -19,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 @Slf4j
@@ -79,41 +78,17 @@ public class DeviceProvisioningService {
         return plainToken;
     }
 
+
     @Transactional
     public DeviceCredentialsResponse simRegisterDevice(SimRegisterRequest request) {
         String deviceId = request.getDeviceId();
         double lat = request.getLatitude() != null ? request.getLatitude() : 0.0;
         double lng = request.getLongitude() != null ? request.getLongitude() : 0.0;
 
-        Device device = deviceRepository.findById(deviceId).orElse(null);
+        Device device = getOrCreateDevice(deviceId);
+        createDeviceContainerIfNotExists(device,lat,lng);
+
         String mqttPassword = UUID.randomUUID().toString();
-
-        if (device == null) {
-            device = new Device();
-            device.setId(deviceId);
-            device.setDeviceStatus(DeviceStatus.IDLE);
-            device.setRegistrationStatus("SIM");
-            device.setCreatedAt(LocalDateTime.now());
-            device.setLastSeenAt(LocalDateTime.now());
-        } else {
-            device.setRegistrationStatus("SIM");
-        }
-
-        if (device.getContainer() == null) {
-            String containerId = "sim-container-" + deviceId;
-            Container container = containerRepository.findById(containerId).orElseGet(() -> {
-                Container c = new Container();
-                c.setId(containerId);
-                c.setName("Sim [" + deviceId + "]");
-                c.setLatitude(lat);
-                c.setLongitude(lng);
-                c.setLatestFillLevel(0.0);
-                c.setAddress("Simulation");
-                return containerRepository.save(c);
-            });
-            device.setContainer(container);
-        }
-
         device.setMqttPasswordHash(passwordEncoder.encode(mqttPassword));
         device.setRegisteredAt(LocalDateTime.now());
         deviceRepository.save(device);
@@ -129,6 +104,31 @@ public class DeviceProvisioningService {
                 "waste/devices/" + deviceId + "/events",
                 "waste/devices/" + deviceId + "/commands"
         );
+    }
+
+    private static final List<Integer> SIM_CAPACITIES = List.of(100, 200, 400, 600, 800);
+    private static final WasteType[] SIM_WASTE_TYPES = WasteType.values();
+    private static final Random RNG = new Random();
+
+    private void createDeviceContainerIfNotExists(Device device, double lat, double lng) {
+        if (device.getContainer() == null) {
+            String containerId = "container-" + device.getId();
+            Container container = containerRepository.findById(containerId).orElseGet(() -> {
+                int capacity = SIM_CAPACITIES.get(RNG.nextInt(SIM_CAPACITIES.size()));
+                WasteType wasteType = SIM_WASTE_TYPES[RNG.nextInt(SIM_WASTE_TYPES.length)];
+                Container c = new Container();
+                c.setId(containerId);
+                c.setName(containerId);
+                c.setLatitude(lat);
+                c.setLongitude(lng);
+                c.setLatestFillLevel(0.0);
+                c.setAddress("Simulation");
+                c.setCapacity(capacity);
+                c.setWasteType(wasteType);
+                return containerRepository.save(c);
+            });
+            device.setContainer(container);
+        }
     }
 
     @Transactional
@@ -172,5 +172,22 @@ public class DeviceProvisioningService {
                 "waste/devices/" + deviceId + "/events",
                 "waste/devices/" + deviceId + "/commands"
         );
+    }
+
+    private Device getOrCreateDevice(String deviceId) {
+        Device device = deviceRepository.findById(deviceId).orElse(null);
+
+        if (device == null) {
+            device = new Device();
+            device.setId(deviceId);
+            device.setDeviceStatus(DeviceStatus.IDLE);
+            device.setRegistrationStatus("SIM");
+            device.setCreatedAt(LocalDateTime.now());
+            device.setLastSeenAt(LocalDateTime.now());
+        } else {
+            device.setRegistrationStatus("SIM");
+        }
+
+        return device;
     }
 }

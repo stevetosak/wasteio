@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-// Skopje bounding box
+// Skopje granici lat lng
 const (
 	skopjeLatMin = 41.970
 	skopjeLatMax = 42.040
@@ -45,7 +45,7 @@ func LoadSimDevice(dataDir string) (*DeviceConfig, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get hostname: %w", err)
 	}
-	deviceID := "sim-" + hostname
+	deviceID := "bin-agent-" + hostname
 	effectiveDir := filepath.Join(dataDir, deviceID)
 
 	credPath := filepath.Join(effectiveDir, "credentials.json")
@@ -72,7 +72,7 @@ func LoadOrCreate(deviceID, registrationToken, dataDir string) (*DeviceConfig, e
 		}
 	}
 	return &DeviceConfig{
-		DeviceID:       deviceID,
+		DeviceID:          deviceID,
 		RegistrationToken: registrationToken,
 	}, nil
 }

@@ -11,7 +11,7 @@ type Tab = 'classic' | 'agent'
 export default function SimulatorPage() {
   const { containers, refreshContainer } = useContainers()
   const nav = useNavigate()
-  const [tab, setTab] = useState<Tab>('classic')
+  const [tab, setTab] = useState<Tab>('agent')
 
   return (
     <div className="flex-1 h-full flex flex-col bg-gray-100 overflow-y-auto">
@@ -39,17 +39,6 @@ export default function SimulatorPage() {
         {/* ── Tab toggle ────────────────────────────────────────────── */}
         <div className="flex gap-1 p-1 bg-white rounded-2xl border border-gray-200 shadow-sm w-fit">
           <button
-            onClick={() => setTab('classic')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              tab === 'classic'
-                ? 'bg-gray-900 text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <FontAwesomeIcon icon={faServer} />
-            Classic Simulator
-          </button>
-          <button
             onClick={() => setTab('agent')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               tab === 'agent'
@@ -58,7 +47,19 @@ export default function SimulatorPage() {
             }`}
           >
             <FontAwesomeIcon icon={faMicrochip} />
-            Waste-bin-agent
+            Simulator v2
+          </button>
+          <button
+            onClick={() => setTab('classic')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+              tab === 'classic'
+                ? 'bg-gray-900 text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <FontAwesomeIcon icon={faServer} />
+            Simulator v1
+            <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 font-semibold">deprecated</span>
           </button>
         </div>
 

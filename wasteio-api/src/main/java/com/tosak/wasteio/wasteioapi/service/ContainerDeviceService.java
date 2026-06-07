@@ -5,10 +5,7 @@ import com.tosak.wasteio.wasteioapi.dto.ContainerDTO;
 import com.tosak.wasteio.wasteioapi.dto.FillSnapshotDTO;
 import com.tosak.wasteio.wasteioapi.dto.SimDeviceDTO;
 import com.tosak.wasteio.wasteioapi.dto.SimulatorConfigDTO;
-import com.tosak.wasteio.wasteioapi.model.Container;
-import com.tosak.wasteio.wasteioapi.model.DeviceStatus;
-import com.tosak.wasteio.wasteioapi.model.Pickup;
-import com.tosak.wasteio.wasteioapi.model.Telemetry;
+import com.tosak.wasteio.wasteioapi.model.*;
 import com.tosak.wasteio.wasteioapi.mqtt.MosquittoDynsecService;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import com.tosak.wasteio.wasteioapi.repository.DailyFillSnapshotRepository;
@@ -232,7 +229,7 @@ public class ContainerDeviceService {
 
         DeviceStatus deviceStatus = deviceRepository.findByContainer_Id(container.getId())
                 .stream().findFirst()
-                .map(d -> d.getDeviceStatus())
+                .map(Device::getDeviceStatus)
                 .orElse(DeviceStatus.ACTIVE);
 
         return ContainerDTO.builder()
