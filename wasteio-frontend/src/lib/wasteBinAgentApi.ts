@@ -1,0 +1,45 @@
+import type { SimDevice } from '../types/simDevice'
+import type { SimulatorConfig } from '../types/simulator'
+import { getStoredToken } from './authApi'
+import { envConfig } from '../config/env'
+
+const BASE = envConfig.API_URL.replace(/\/api$/, '')
+
+async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getStoredToken()
+  const res = await fetch(`${BASE}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...init,
+  })
+  if (!res.ok) {
+    const body = await res.text()
+    if (import.meta.env.DEV) throw new Error(`API ${res.status}: ${body}`)
+    let message = `Request failed (${res.status})`
+    try { const json = JSON.parse(body); if (json.message) message = json.message } catch { /* not JSON */ }
+    throw new Error(message)
+  }
+  if (res.status === 204) return undefined as T
+  return res.json()
+}
+
+export async function fetchSimDevices(): Promise<SimDevice[]> {
+  return req('/admin/devices/sim')
+}
+
+export async function pushDeviceConfig(deviceId: string, config: SimulatorConfig): Promise<void> {
+  await req<void>(`/admin/devices/${deviceId}/config`, {
+    method: 'POST',
+    body: JSON.stringify(config),
+  })
+}
+
+export async function triggerHealthCheck(): Promise<void> {
+  await req<void>('/admin/devices/healthcheck', { method: 'POST' })
+}
+
+export async function clearOfflineSimDevices(): Promise<void> {
+  await req<void>('/admin/devices/sim/offline', { method: 'DELETE' })
+}

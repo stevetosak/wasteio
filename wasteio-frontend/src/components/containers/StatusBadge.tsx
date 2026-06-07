@@ -4,6 +4,7 @@ const config: Record<ContainerStatus, { label: string; dotClass: string; classNa
   active:      { label: 'Active',      dotClass: 'bg-green-500', className: 'bg-green-50 text-green-700' },
   maintenance: { label: 'Maintenance', dotClass: 'bg-amber-500', className: 'bg-amber-50 text-amber-700' },
   offline:     { label: 'Offline',     dotClass: 'bg-gray-400',  className: 'bg-gray-100 text-gray-600' },
+  idle:        { label: 'Idle',        dotClass: 'bg-blue-400',  className: 'bg-blue-50 text-blue-600' },
 }
 
 export default function StatusBadge({ status }: { status: ContainerStatus }) {

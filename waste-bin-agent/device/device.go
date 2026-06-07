@@ -1,0 +1,419 @@
+package device
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"math"
+	"math/rand"
+	"net/http"
+	"strings"
+	"time"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/stevetosak/wasteio/waste-bin-agent/config"
+)
+
+type Telemetry struct {
+	DeviceID  string          `json:"deviceId"`
+	FillLevel float64         `json:"fillLevel"`
+	Battery   float64         `json:"batteryLevel"`
+	Timestamp time.Time       `json:"timestamp"`
+	Location  config.Location `json:"location"`
+}
+
+type Event struct {
+	DeviceID  string    `json:"deviceId"`
+	EventType string    `json:"eventType"`
+	FillLevel float64   `json:"fillLevel"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type registerRequest struct {
+	DeviceID          string `json:"deviceId"`
+	RegistrationToken string `json:"registrationToken"`
+}
+
+type registerResponse struct {
+	MqttHost       string `json:"mqttHost"`
+	MqttPort       int    `json:"mqttPort"`
+	MqttUsername   string `json:"mqttUsername"`
+	MqttPassword   string `json:"mqttPassword"`
+	TelemetryTopic string `json:"telemetryTopic"`
+}
+
+type simRegisterRequest struct {
+	DeviceID  string  `json:"deviceId"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+type Device struct {
+	cfg       config.DeviceConfig
+	fillLevel float64
+	battery   float64
+	client    mqtt.Client
+	pickupCh  chan struct{}
+}
+
+func New(cfg config.DeviceConfig) *Device {
+	return &Device{
+		cfg:       cfg,
+		fillLevel: rand.Float64() * 30,
+		battery:   80 + rand.Float64()*20,
+		pickupCh:  make(chan struct{}, 1),
+	}
+}
+
+// Register calls the API to exchange a registration token for MQTT credentials.
+// If the device already has credentials, it returns immediately.
+func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
+	if cfg.MqttPassword != "" {
+		return nil
+	}
+	if cfg.RegistrationToken == "" {
+		return fmt.Errorf("[%s] no registration token set, skipping registration", cfg.DeviceID)
+	}
+
+	body, err := json.Marshal(registerRequest{
+		DeviceID:          cfg.DeviceID,
+		RegistrationToken: cfg.RegistrationToken,
+	})
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post(apiBaseURL+"/api/devices/register", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("[%s] registration request failed: %w", cfg.DeviceID, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("[%s] registration failed (HTTP %d): %s", cfg.DeviceID, resp.StatusCode, raw)
+	}
+
+	var creds registerResponse
+	if err := json.NewDecoder(resp.Body).Decode(&creds); err != nil {
+		return fmt.Errorf("[%s] failed to decode registration response: %w", cfg.DeviceID, err)
+	}
+
+	cfg.MqttUsername = creds.MqttUsername
+	cfg.MqttPassword = creds.MqttPassword
+	cfg.RegistrationToken = ""
+	fmt.Printf("[%s] registered successfully\n", cfg.DeviceID)
+	return nil
+}
+
+// SimRegister logs in as admin and calls /admin/devices/sim-register to obtain MQTT credentials.
+// If the device already has credentials (loaded from disk), it returns immediately.
+func SimRegister(cfg *config.DeviceConfig, apiBaseURL, adminEmail, adminPassword string) error {
+	if cfg.MqttPassword != "" {
+		return nil
+	}
+
+	loginURL := fmt.Sprintf("%s/auth/login?email=%s&password=%s",
+		apiBaseURL, adminEmail, adminPassword)
+	resp, err := http.Post(loginURL, "application/json", nil)
+	if err != nil {
+		return fmt.Errorf("[%s] login request failed: %w", cfg.DeviceID, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("[%s] login failed (HTTP %d): %s", cfg.DeviceID, resp.StatusCode, raw)
+	}
+	var loginResp struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&loginResp); err != nil {
+		return fmt.Errorf("[%s] failed to decode login response: %w", cfg.DeviceID, err)
+	}
+
+	body, _ := json.Marshal(simRegisterRequest{
+		DeviceID:  cfg.DeviceID,
+		Latitude:  cfg.Location.Lat,
+		Longitude: cfg.Location.Lng,
+	})
+	req, _ := http.NewRequest("POST", apiBaseURL+"/admin/devices/sim-register", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+loginResp.Token)
+
+	resp2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("[%s] sim-register request failed: %w", cfg.DeviceID, err)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp2.Body)
+		return fmt.Errorf("[%s] sim-register failed (HTTP %d): %s", cfg.DeviceID, resp2.StatusCode, raw)
+	}
+
+	var creds registerResponse
+	if err := json.NewDecoder(resp2.Body).Decode(&creds); err != nil {
+		return fmt.Errorf("[%s] failed to decode sim-register response: %w", cfg.DeviceID, err)
+	}
+
+	cfg.MqttUsername = creds.MqttUsername
+	cfg.MqttPassword = creds.MqttPassword
+	fmt.Printf("[%s] sim-registered successfully\n", cfg.DeviceID)
+	return nil
+}
+
+// configUpdate is the shape of a runtime config patch received over MQTT.
+// All fields are optional — zero value means "leave unchanged".
+// Durations are Go duration strings (e.g. "5s", "2m").
+type configUpdate struct {
+	FillInterval      string  `json:"fillInterval"`
+	BatteryInterval   string  `json:"batteryInterval"`
+	TelemetryInterval string  `json:"telemetryInterval"`
+	FillRateMin       float64 `json:"fillRateMin"`
+	FillRateMax       float64 `json:"fillRateMax"`
+	BatteryDrainMin   float64 `json:"batteryDrainMin"`
+	BatteryDrainMax   float64 `json:"batteryDrainMax"`
+}
+
+// connect creates the MQTT client, connects to the broker, and subscribes to the commands topic.
+func (d *Device) connect(brokerURL string, rtCfg *config.RuntimeConfig) error {
+	opts := mqtt.NewClientOptions().
+		AddBroker(brokerURL).
+		SetClientID("simulator-" + d.cfg.DeviceID).
+		SetCleanSession(true).
+		SetAutoReconnect(true)
+
+	if d.cfg.MqttUsername != "" {
+		opts.SetUsername(d.cfg.MqttUsername)
+		opts.SetPassword(d.cfg.MqttPassword)
+	}
+
+	d.client = mqtt.NewClient(opts)
+
+	if token := d.client.Connect(); token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+
+	commandTopic := fmt.Sprintf("waste/devices/%s/commands", d.cfg.DeviceID)
+	token := d.client.Subscribe(commandTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		payload := strings.TrimSpace(string(msg.Payload()))
+		if payload == "healthcheck" {
+			fmt.Printf("[%s] healthcheck received, publishing ack\n", d.cfg.DeviceID)
+			d.publishEvent("healthcheck-ack")
+			return
+		}
+		select {
+		case d.pickupCh <- struct{}{}:
+		default:
+		}
+	})
+	token.Wait()
+	if err := token.Error(); err != nil {
+		return err
+	}
+
+	configTopic := fmt.Sprintf("waste/devices/%s/config", d.cfg.DeviceID)
+	cfgToken := d.client.Subscribe(configTopic, 1, func(_ mqtt.Client, msg mqtt.Message) {
+		fmt.Printf("[%s] config message received: %s\n", d.cfg.DeviceID, msg.Payload())
+		var u configUpdate
+		if err := json.Unmarshal(msg.Payload(), &u); err != nil {
+			fmt.Printf("[%s] invalid config message: %v\n", d.cfg.DeviceID, err)
+			return
+		}
+		snap := rtCfg.Snapshot()
+		if u.FillInterval != "" {
+			if dur, err := time.ParseDuration(u.FillInterval); err == nil && dur > 0 {
+				fmt.Printf("[%s] fillInterval: %v -> %v\n", d.cfg.DeviceID, snap.FillInterval, dur)
+				snap.FillInterval = dur
+			} else if err != nil {
+				fmt.Printf("[%s] bad fillInterval %q: %v\n", d.cfg.DeviceID, u.FillInterval, err)
+			}
+		}
+		if u.BatteryInterval != "" {
+			if dur, err := time.ParseDuration(u.BatteryInterval); err == nil && dur > 0 {
+				fmt.Printf("[%s] batteryInterval: %v -> %v\n", d.cfg.DeviceID, snap.BatteryInterval, dur)
+				snap.BatteryInterval = dur
+			}
+		}
+		if u.TelemetryInterval != "" {
+			if dur, err := time.ParseDuration(u.TelemetryInterval); err == nil && dur > 0 {
+				fmt.Printf("[%s] telemetryInterval: %v -> %v\n", d.cfg.DeviceID, snap.TelemetryInterval, dur)
+				snap.TelemetryInterval = dur
+			}
+		}
+		if u.FillRateMin > 0 {
+			fmt.Printf("[%s] fillRateMin: %v -> %v\n", d.cfg.DeviceID, snap.FillRateMin, u.FillRateMin)
+			snap.FillRateMin = u.FillRateMin
+		}
+		if u.FillRateMax > 0 {
+			fmt.Printf("[%s] fillRateMax: %v -> %v\n", d.cfg.DeviceID, snap.FillRateMax, u.FillRateMax)
+			snap.FillRateMax = u.FillRateMax
+		}
+		if u.BatteryDrainMin > 0 {
+			snap.BatteryDrainMin = u.BatteryDrainMin
+		}
+		if u.BatteryDrainMax > 0 {
+			snap.BatteryDrainMax = u.BatteryDrainMax
+		}
+		rtCfg.Update(snap)
+		fmt.Printf("[%s] config applied\n", d.cfg.DeviceID)
+	})
+	cfgToken.Wait()
+	if err := cfgToken.Error(); err != nil {
+		// Non-fatal: device runs but won't receive runtime config updates.
+		// Most likely cause: dynsec subscribe ACL missing — re-register the device.
+		fmt.Printf("[%s] WARNING: config topic subscription failed: %v — runtime config updates disabled\n", d.cfg.DeviceID, err)
+	}
+	return nil
+}
+
+func (d *Device) updateFill(snap config.ConfigSnapshot) {
+	d.fillLevel += snap.FillRateMin + rand.Float64()*(snap.FillRateMax-snap.FillRateMin)
+	if d.fillLevel > 100 {
+		d.fillLevel = 100
+	}
+}
+
+func (d *Device) updateBattery(snap config.ConfigSnapshot) {
+	d.battery -= snap.BatteryDrainMin + rand.Float64()*(snap.BatteryDrainMax-snap.BatteryDrainMin)
+	if d.battery < 0 {
+		d.battery = 0
+	}
+}
+
+func round2(f float64) float64 {
+	return math.Round(f*100) / 100
+}
+
+func (d *Device) buildPayload() ([]byte, error) {
+	t := Telemetry{
+		DeviceID:  d.cfg.DeviceID,
+		FillLevel: round2(d.fillLevel),
+		Battery:   round2(d.battery),
+		Timestamp: time.Now().UTC(),
+		Location:  d.cfg.Location,
+	}
+	return json.Marshal(t)
+}
+
+func (d *Device) publishTelemetry(topic string) {
+	payload, err := d.buildPayload()
+	if err != nil {
+		fmt.Printf("[%s] marshal error: %v\n", d.cfg.DeviceID, err)
+		return
+	}
+	token := d.client.Publish(topic, 0, false, payload)
+	token.Wait()
+	if token.Error() != nil {
+		fmt.Printf("[%s] publish error: %v\n", d.cfg.DeviceID, token.Error())
+		return
+	}
+	fmt.Printf("[%s] published: %s\n", d.cfg.DeviceID, payload)
+}
+
+func (d *Device) publishEvent(eventType string) {
+	topic := fmt.Sprintf("waste/devices/%s/events", d.cfg.DeviceID)
+	payload, err := json.Marshal(Event{
+		DeviceID:  d.cfg.DeviceID,
+		EventType: eventType,
+		FillLevel: round2(d.fillLevel),
+		Timestamp: time.Now().UTC(),
+	})
+	if err != nil {
+		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.DeviceID, err)
+		return
+	}
+	token := d.client.Publish(topic, 1, false, payload)
+	token.Wait()
+	if token.Error() != nil {
+		fmt.Printf("[%s] event publish error: %v\n", d.cfg.DeviceID, token.Error())
+	}
+}
+
+func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.RuntimeConfig) {
+	if err := d.connect(brokerURL, rtCfg); err != nil {
+		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.DeviceID, err)
+		return
+	}
+	defer d.client.Disconnect(250)
+
+	telemetryTopic := fmt.Sprintf("waste/devices/%s/telemetry", d.cfg.DeviceID)
+
+	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.DeviceID, d.fillLevel)
+	d.publishTelemetry(telemetryTopic)
+
+	select {
+	case <-time.After(time.Duration(3+rand.Intn(6)) * time.Second):
+	case <-ctx.Done():
+		return
+	}
+
+	changes := rtCfg.Changes()
+	snap := rtCfg.Snapshot()
+
+	fillInterval := snap.FillInterval
+	batteryInterval := snap.BatteryInterval
+	telemetryInterval := snap.TelemetryInterval
+
+	fillTicker := time.NewTicker(fillInterval)
+	batteryTicker := time.NewTicker(batteryInterval)
+	telemetryTicker := time.NewTicker(telemetryInterval)
+	defer fillTicker.Stop()
+	defer batteryTicker.Stop()
+	defer telemetryTicker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Printf("[%s] shutting down...\n", d.cfg.DeviceID)
+			return
+
+		case <-d.pickupCh:
+			d.fillLevel *= 0.15 + rand.Float64()*0.1
+			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.DeviceID, d.fillLevel)
+			d.publishEvent("emptied")
+
+		case <-changes:
+			snap = rtCfg.Snapshot()
+			if snap.FillInterval != fillInterval {
+				fmt.Printf("[%s] fill ticker: %v -> %v\n", d.cfg.DeviceID, fillInterval, snap.FillInterval)
+				fillInterval = snap.FillInterval
+				fillTicker.Reset(fillInterval)
+			}
+			if snap.BatteryInterval != batteryInterval {
+				fmt.Printf("[%s] battery ticker: %v -> %v\n", d.cfg.DeviceID, batteryInterval, snap.BatteryInterval)
+				batteryInterval = snap.BatteryInterval
+				batteryTicker.Reset(batteryInterval)
+			}
+			if snap.TelemetryInterval != telemetryInterval {
+				fmt.Printf("[%s] telemetry ticker: %v -> %v\n", d.cfg.DeviceID, telemetryInterval, snap.TelemetryInterval)
+				telemetryInterval = snap.TelemetryInterval
+				jitter := time.Duration(rand.Int63n(int64(telemetryInterval)))
+				telemetryTicker.Reset(jitter + 1)
+			}
+
+		case <-fillTicker.C:
+			snap = rtCfg.Snapshot()
+			if snap.FillInterval != fillInterval {
+				fillInterval = snap.FillInterval
+				fillTicker.Reset(fillInterval)
+			}
+			d.updateFill(snap)
+
+		case <-batteryTicker.C:
+			snap = rtCfg.Snapshot()
+			if snap.BatteryInterval != batteryInterval {
+				batteryInterval = snap.BatteryInterval
+				batteryTicker.Reset(batteryInterval)
+			}
+			d.updateBattery(snap)
+
+		case <-telemetryTicker.C:
+			snap = rtCfg.Snapshot()
+			telemetryInterval = snap.TelemetryInterval
+			telemetryTicker.Reset(telemetryInterval)
+			d.publishTelemetry(telemetryTopic)
+		}
+	}
+}

@@ -137,7 +137,7 @@ export default function ActivePickupPage() {
 
     try {
       const token = getStoredToken()
-      const res = await fetch(`${envConfig.API_URL}/devices/${currentStop.id}/pickup`, {
+      const res = await fetch(`${envConfig.API_URL}/containers/${currentStop.id}/pickup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

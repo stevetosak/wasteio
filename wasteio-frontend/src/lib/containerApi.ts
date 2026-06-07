@@ -35,10 +35,11 @@ const fromApiWasteType: Record<string, WasteType> = {
   ELECTRONIC: 'hazardous',
 }
 
-const fromApiStatus: Record<string, ContainerStatus> = {
+export const fromApiStatus: Record<string, ContainerStatus> = {
   ACTIVE: 'active',
   MAINTENANCE: 'maintenance',
   OFFLINE: 'offline',
+  IDLE: 'idle',
 }
 
 
@@ -75,18 +76,24 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     },
     ...init,
   })
-  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`)
+  if (!res.ok) {
+    const body = await res.text()
+    if (import.meta.env.DEV) throw new Error(`API ${res.status}: ${body}`)
+    let message = `Request failed (${res.status})`
+    try { const json = JSON.parse(body); if (json.message) message = json.message } catch { /* not JSON */ }
+    throw new Error(message)
+  }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
 export async function fetchContainers(): Promise<Container[]> {
-  const raw = await req<ApiContainer[]>('/devices')
+  const raw = await req<ApiContainer[]>('/containers')
   return raw.map(fromApi)
 }
 
 export async function createContainerApi(data: ContainerFormData): Promise<Container> {
-  const raw = await req<ApiContainer>('/devices', {
+  const raw = await req<ApiContainer>('/containers', {
     method: 'POST',
     body: JSON.stringify(toApi(data)),
   })
@@ -94,7 +101,7 @@ export async function createContainerApi(data: ContainerFormData): Promise<Conta
 }
 
 export async function updateContainerApi(id: string, data: ContainerFormData): Promise<Container> {
-  const raw = await req<ApiContainer>(`/devices/${id}`, {
+  const raw = await req<ApiContainer>(`/containers/${id}`, {
     method: 'PUT',
     body: JSON.stringify({ id, ...toApi(data) }),
   })
@@ -102,11 +109,11 @@ export async function updateContainerApi(id: string, data: ContainerFormData): P
 }
 
 export async function deleteContainerApi(id: string): Promise<void> {
-  await req<void>(`/devices/${id}`, { method: 'DELETE' })
+  await req<void>(`/containers/${id}`, { method: 'DELETE' })
 }
 
 export async function getContainerByIdApi(id: string): Promise<Container> {
-  const raw = await req<ApiContainer>(`/devices/${id}`)
+  const raw = await req<ApiContainer>(`/containers/${id}`)
   return fromApi(raw)
 }
 
@@ -116,5 +123,5 @@ export interface FillSnapshot {
 }
 
 export async function fetchFillHistory(id: string, days: number): Promise<FillSnapshot[]> {
-  return req<FillSnapshot[]>(`/devices/${id}/fill-history?days=${days}`)
+  return req<FillSnapshot[]>(`/containers/${id}/fill-history?days=${days}`)
 }

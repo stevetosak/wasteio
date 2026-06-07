@@ -36,10 +36,6 @@ public class Container {
     @Column(name = "waste_type")
     private WasteType wasteType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "device_status", nullable = false)
-    private DeviceStatus deviceStatus = DeviceStatus.ACTIVE;
-
     @Column(name = "address")
     private String address;
 

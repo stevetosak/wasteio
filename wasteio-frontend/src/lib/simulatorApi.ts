@@ -26,5 +26,5 @@ export async function updateSimulatorConfig(config: Partial<SimulatorConfig>): P
 }
 
 export async function triggerPickup(containerId: string): Promise<void> {
-  await req<void>(`/devices/${containerId}/pickup`, { method: 'POST' })
+  await req<void>(`/containers/${containerId}/pickup`, { method: 'POST' })
 }

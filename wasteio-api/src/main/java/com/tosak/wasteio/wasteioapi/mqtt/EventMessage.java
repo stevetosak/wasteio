@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 public class EventMessage {
 
-    @JsonProperty("containerId")
-    private String containerId;
+    @JsonProperty("deviceId")
+    private String deviceId;
 
     @JsonProperty("eventType")
     private String eventType;

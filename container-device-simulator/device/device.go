@@ -1,11 +1,14 @@
 package device
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
+	"net/http"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -13,7 +16,7 @@ import (
 )
 
 type Telemetry struct {
-	ContainerID string          `json:"containerId"`
+	DeviceID string          `json:"deviceId"`
 	FillLevel   float64         `json:"fillLevel"`
 	Battery     float64         `json:"batteryLevel"`
 	Timestamp   time.Time       `json:"timestamp"`
@@ -21,10 +24,23 @@ type Telemetry struct {
 }
 
 type Event struct {
-	ContainerID string    `json:"containerId"`
+	DeviceID string    `json:"deviceId"`
 	EventType   string    `json:"eventType"`
 	FillLevel   float64   `json:"fillLevel"`
 	Timestamp   time.Time `json:"timestamp"`
+}
+
+type registerRequest struct {
+	DeviceID          string `json:"deviceId"`
+	RegistrationToken string `json:"registrationToken"`
+}
+
+type registerResponse struct {
+	MqttHost       string `json:"mqttHost"`
+	MqttPort       int    `json:"mqttPort"`
+	MqttUsername   string `json:"mqttUsername"`
+	MqttPassword   string `json:"mqttPassword"`
+	TelemetryTopic string `json:"telemetryTopic"`
 }
 
 type Device struct {
@@ -44,14 +60,59 @@ func New(cfg config.DeviceConfig) *Device {
 	}
 }
 
+// Register calls the API to exchange a registration token for MQTT credentials.
+// If the device already has credentials, it returns immediately.
+func Register(cfg *config.DeviceConfig, apiBaseURL string) error {
+	if cfg.MqttPassword != "" {
+		return nil
+	}
+	if cfg.RegistrationToken == "" {
+		return fmt.Errorf("[%s] no registration token set, skipping registration", cfg.DeviceID)
+	}
+
+	body, err := json.Marshal(registerRequest{
+		DeviceID:          cfg.DeviceID,
+		RegistrationToken: cfg.RegistrationToken,
+	})
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post(apiBaseURL+"/api/devices/register", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("[%s] registration request failed: %w", cfg.DeviceID, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("[%s] registration failed (HTTP %d): %s", cfg.DeviceID, resp.StatusCode, raw)
+	}
+
+	var creds registerResponse
+	if err := json.NewDecoder(resp.Body).Decode(&creds); err != nil {
+		return fmt.Errorf("[%s] failed to decode registration response: %w", cfg.DeviceID, err)
+	}
+
+	cfg.MqttUsername = creds.MqttUsername
+	cfg.MqttPassword = creds.MqttPassword
+	cfg.RegistrationToken = ""
+	fmt.Printf("[%s] registered successfully\n", cfg.DeviceID)
+	return nil
+}
+
 // connect creates the MQTT client, connects to the broker, and subscribes to the commands topic.
-// The ClientID must be unique per device — the broker uses it to identify connections.
 func (d *Device) connect(brokerURL string) error {
 	opts := mqtt.NewClientOptions().
 		AddBroker(brokerURL).
-		SetClientID("simulator-" + d.cfg.ContainerID).
+		SetClientID("simulator-" + d.cfg.DeviceID).
 		SetCleanSession(true).
 		SetAutoReconnect(true)
+
+	if d.cfg.MqttUsername != "" {
+		opts.SetUsername(d.cfg.MqttUsername)
+		opts.SetPassword(d.cfg.MqttPassword)
+	}
 
 	d.client = mqtt.NewClient(opts)
 
@@ -59,12 +120,9 @@ func (d *Device) connect(brokerURL string) error {
 		return token.Error()
 	}
 
-	commandTopic := fmt.Sprintf("waste/containers/%s/commands", d.cfg.ContainerID)
+	commandTopic := fmt.Sprintf("waste/devices/%s/commands", d.cfg.DeviceID)
 
-	// Subscribe with a callback. This callback runs on a paho-managed goroutine,
-	// NOT on our Run goroutine. We bridge it into pickupCh so Run handles it safely.
 	token := d.client.Subscribe(commandTopic, 1, func(_ mqtt.Client, _ mqtt.Message) {
-		// Non-blocking send: if a pickup is already pending we just drop the duplicate.
 		select {
 		case d.pickupCh <- struct{}{}:
 		default:
@@ -94,7 +152,7 @@ func round2(f float64) float64 {
 
 func (d *Device) buildPayload() ([]byte, error) {
 	t := Telemetry{
-		ContainerID: d.cfg.ContainerID,
+		DeviceID: d.cfg.DeviceID,
 		FillLevel:   round2(d.fillLevel),
 		Battery:     round2(d.battery),
 		Timestamp:   time.Now().UTC(),
@@ -106,61 +164,56 @@ func (d *Device) buildPayload() ([]byte, error) {
 func (d *Device) publishTelemetry(topic string) {
 	payload, err := d.buildPayload()
 	if err != nil {
-		fmt.Printf("[%s] marshal error: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] marshal error: %v\n", d.cfg.DeviceID, err)
 		return
 	}
 	token := d.client.Publish(topic, 0, false, payload)
 	token.Wait()
 	if token.Error() != nil {
-		fmt.Printf("[%s] publish error: %v\n", d.cfg.ContainerID, token.Error())
+		fmt.Printf("[%s] publish error: %v\n", d.cfg.DeviceID, token.Error())
 		return
 	}
-	fmt.Printf("[%s] published: %s\n", d.cfg.ContainerID, payload)
+	fmt.Printf("[%s] published: %s\n", d.cfg.DeviceID, payload)
 }
 
 func (d *Device) publishEvent(eventType string) {
-	topic := fmt.Sprintf("waste/containers/%s/events", d.cfg.ContainerID)
+	topic := fmt.Sprintf("waste/devices/%s/events", d.cfg.DeviceID)
 	payload, err := json.Marshal(Event{
-		ContainerID: d.cfg.ContainerID,
+		DeviceID: d.cfg.DeviceID,
 		EventType:   eventType,
 		FillLevel:   round2(d.fillLevel),
 		Timestamp:   time.Now().UTC(),
 	})
 	if err != nil {
-		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] event marshal error: %v\n", d.cfg.DeviceID, err)
 		return
 	}
-	// QoS 1: the backend needs to receive this exactly once.
 	token := d.client.Publish(topic, 1, false, payload)
 	token.Wait()
 	if token.Error() != nil {
-		fmt.Printf("[%s] event publish error: %v\n", d.cfg.ContainerID, token.Error())
+		fmt.Printf("[%s] event publish error: %v\n", d.cfg.DeviceID, token.Error())
 	}
 }
 
 func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.RuntimeConfig) {
 	if err := d.connect(brokerURL); err != nil {
-		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.ContainerID, err)
+		fmt.Printf("[%s] failed to connect to broker: %v\n", d.cfg.DeviceID, err)
 		return
 	}
-	// Disconnect cleanly when Run exits, giving in-flight messages 250ms to flush.
 	defer d.client.Disconnect(250)
 
-	telemetryTopic := fmt.Sprintf("waste/containers/%s/telemetry", d.cfg.ContainerID)
+	telemetryTopic := fmt.Sprintf("waste/devices/%s/telemetry", d.cfg.DeviceID)
 
 	snap := rtCfg.Snapshot()
 
-	// Publish current state immediately so the backend has data before the jitter delay.
-	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+	fmt.Printf("[%s] connected, fill=%.1f%%\n", d.cfg.DeviceID, d.fillLevel)
 	d.publishTelemetry(telemetryTopic)
 
-	// Random offset (1–3s) so devices don't all fire their tickers at the same time.
 	select {
 	case <-time.After(time.Duration(3+rand.Intn(6)) * time.Second):
 	case <-ctx.Done():
 		return
 	}
-
 
 	changes := rtCfg.Subscribe()
 
@@ -178,13 +231,12 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Printf("[%s] shutting down...\n", d.cfg.ContainerID)
+			fmt.Printf("[%s] shutting down...\n", d.cfg.DeviceID)
 			return
 
 		case <-d.pickupCh:
-			// Drop fill by ~80%, leaving a small residual (workers never empty perfectly).
 			d.fillLevel *= 0.15 + rand.Float64()*0.1
-			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.ContainerID, d.fillLevel)
+			fmt.Printf("[%s] pickup received, fill dropped to %.1f%%\n", d.cfg.DeviceID, d.fillLevel)
 			d.publishEvent("emptied")
 
 		case <-changes:
@@ -199,10 +251,6 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 			}
 			if snap.TelemetryInterval != telemetryInterval {
 				telemetryInterval = snap.TelemetryInterval
-				// All devices receive this signal simultaneously, so a plain Reset would
-				// re-synchronize all 20 tickers. Use a random offset within the new interval
-				// so they spread back out. The tick handler always resets to the true interval,
-				// so the period self-corrects after this one jittered first fire.
 				jitter := time.Duration(rand.Int63n(int64(telemetryInterval)))
 				telemetryTicker.Reset(jitter + 1)
 			}
@@ -225,12 +273,8 @@ func (d *Device) Run(ctx context.Context, brokerURL string, rtCfg *config.Runtim
 
 		case <-telemetryTicker.C:
 			snap = rtCfg.Snapshot()
-			// Always reset to the current interval so the period self-corrects after a
-			// jittered reset from a config change.
 			telemetryInterval = snap.TelemetryInterval
 			telemetryTicker.Reset(telemetryInterval)
-			// QoS 0: fire and forget. Fine for telemetry — occasional loss is acceptable.
-			// retain=false: we don't want new subscribers to get a stale reading.
 			d.publishTelemetry(telemetryTopic)
 		}
 	}

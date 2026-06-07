@@ -1,5 +1,5 @@
 export type WasteType = 'general' | 'recycling' | 'organic' | 'hazardous'
-export type ContainerStatus = 'active' | 'maintenance' | 'offline'
+export type ContainerStatus = 'active' | 'maintenance' | 'offline' | 'idle'
 
 export interface Container {
   id: string

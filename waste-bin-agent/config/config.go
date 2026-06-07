@@ -1,0 +1,96 @@
+package config
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"path/filepath"
+)
+
+// Skopje granici lat lng
+const (
+	skopjeLatMin = 41.970
+	skopjeLatMax = 42.040
+	skopjeLngMin = 21.380
+	skopjeLngMax = 21.510
+)
+
+func randomSkopjeLocation() Location {
+	return Location{
+		Lat: skopjeLatMin + rand.Float64()*(skopjeLatMax-skopjeLatMin),
+		Lng: skopjeLngMin + rand.Float64()*(skopjeLngMax-skopjeLngMin),
+	}
+}
+
+type Location struct {
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
+}
+
+type DeviceConfig struct {
+	DeviceID          string   `json:"deviceId"`
+	Location          Location `json:"location"`
+	RegistrationToken string   `json:"registrationToken,omitempty"`
+	MqttUsername      string   `json:"mqttUsername,omitempty"`
+	MqttPassword      string   `json:"mqttPassword,omitempty"`
+}
+
+// LoadSimDevice derives the device ID from the container hostname and returns the config
+// and the effective per-device data dir (dataDir/<deviceID>).
+// On subsequent boots credentials are reloaded from that subdir if present.
+func LoadSimDevice(dataDir string) (*DeviceConfig, string, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get hostname: %w", err)
+	}
+	deviceID := "bin-agent-" + hostname
+	effectiveDir := filepath.Join(dataDir, deviceID)
+
+	credPath := filepath.Join(effectiveDir, "credentials.json")
+	if data, err := os.ReadFile(credPath); err == nil {
+		var cfg DeviceConfig
+		if err := json.Unmarshal(data, &cfg); err == nil && cfg.MqttPassword != "" {
+			log.Printf("[%s] loaded credentials from %s", cfg.DeviceID, credPath)
+			return &cfg, effectiveDir, nil
+		}
+	}
+
+	return &DeviceConfig{DeviceID: deviceID, Location: randomSkopjeLocation()}, effectiveDir, nil
+}
+
+// LoadOrCreate loads persisted credentials from dataDir/credentials.json if present,
+// otherwise builds a config from the supplied deviceID and token.
+func LoadOrCreate(deviceID, registrationToken, dataDir string) (*DeviceConfig, error) {
+	credPath := filepath.Join(dataDir, "credentials.json")
+	if data, err := os.ReadFile(credPath); err == nil {
+		var cfg DeviceConfig
+		if err := json.Unmarshal(data, &cfg); err == nil && cfg.MqttPassword != "" {
+			log.Printf("[%s] loaded credentials from %s", cfg.DeviceID, credPath)
+			return &cfg, nil
+		}
+	}
+	return &DeviceConfig{
+		DeviceID:          deviceID,
+		RegistrationToken: registrationToken,
+	}, nil
+}
+
+// SaveCredentials persists MQTT credentials to dataDir/credentials.json.
+// The registration token is intentionally not saved — it was single-use.
+func SaveCredentials(cfg *DeviceConfig, dataDir string) error {
+	if cfg.MqttPassword == "" {
+		return nil
+	}
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return err
+	}
+	toSave := *cfg
+	toSave.RegistrationToken = ""
+	data, err := json.MarshalIndent(toSave, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dataDir, "credentials.json"), data, 0600)
+}
