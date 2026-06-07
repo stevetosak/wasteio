@@ -24,6 +24,7 @@ export function useTelemetryStream(
     onMessage: (data: string) => void,
     enabled = true,
     onStatus?: (data: string) => void,
+    onContainerJoined?: (data: string) => void,
 ) {
     const [state, setState] = useState<StreamState>({
         status: 'idle',
@@ -37,12 +38,14 @@ export function useTelemetryStream(
     const enabledRef = useRef(false)
     const onMessageRef = useRef<(data: string) => void>(() => {})
     const onStatusRef = useRef<((data: string) => void) | undefined>(undefined)
+    const onContainerJoinedRef = useRef<((data: string) => void) | undefined>(undefined)
     const connectRef = useRef<() => void>(() => {})
 
     // Sync mutable refs inside effects, never at render time
     useEffect(() => { enabledRef.current = enabled }, [enabled])
     useEffect(() => { onMessageRef.current = onMessage }, [onMessage])
     useEffect(() => { onStatusRef.current = onStatus }, [onStatus])
+    useEffect(() => { onContainerJoinedRef.current = onContainerJoined }, [onContainerJoined])
 
     const clearRetryTimer = () => {
         if (retryTimerRef.current !== null) {
@@ -74,6 +77,10 @@ export function useTelemetryStream(
 
             source.addEventListener('status', (e: MessageEvent) => {
                 onStatusRef.current?.(e.data)
+            })
+
+            source.addEventListener('container_joined', (e: MessageEvent) => {
+                onContainerJoinedRef.current?.(e.data)
             })
 
             source.onopen = () => {

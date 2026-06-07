@@ -60,6 +60,13 @@ public class TelemetryBroadcaster {
                 .data(new StatusEventDTO(containerId, status)));
     }
 
+    public void broadcastContainerJoined(String containerId) {
+        send(SseEmitter.event()
+                .id(String.valueOf(System.currentTimeMillis()))
+                .name("container_joined")
+                .data(new ContainerJoinedEventDTO(containerId)));
+    }
+
     private void send(SseEmitter.SseEventBuilder built) {
         if (emitters.isEmpty()) return;
 

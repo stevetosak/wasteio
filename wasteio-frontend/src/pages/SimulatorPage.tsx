@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 type Tab = 'classic' | 'agent'
 
 export default function SimulatorPage() {
-  const { containers, refreshContainer } = useContainers()
+  const { containers, refreshContainer, lastJoinedContainerId } = useContainers()
   const nav = useNavigate()
   const [tab, setTab] = useState<Tab>('agent')
 
@@ -66,7 +66,7 @@ export default function SimulatorPage() {
         {tab === 'classic' ? (
           <SimulatorPanel containers={containers} onPickup={refreshContainer} />
         ) : (
-          <WasteBinAgentPanel containers={containers} />
+          <WasteBinAgentPanel containers={containers} lastJoinedContainerId={lastJoinedContainerId} />
         )}
 
       </div>
