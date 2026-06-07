@@ -3,11 +3,7 @@ services:
     build: .
     environment:
       SIM_MODE: "true"
-      MQTT_BROKER_URL: tcp://host.docker.internal:1883
       DATA_DIR: /app/data
-      API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:8080}
-      SIM_ADMIN_EMAIL: ${SIM_ADMIN_EMAIL}
-      SIM_ADMIN_PASSWORD: ${SIM_ADMIN_PASSWORD}
     volumes:
       - device-data:/app/data
     extra_hosts:

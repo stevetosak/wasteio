@@ -13,6 +13,7 @@ import ContainerTable from './ContainerTable'
 
 interface Props {
   containers: Container[]
+  lastJoinedContainerId?: string | null
 }
 
 interface Preset {
@@ -95,8 +96,12 @@ function Field({ label, value, onChange, type = 'text', step }: FieldProps) {
   )
 }
 
-export default function WasteBinAgentPanel({ containers }: Props) {
+export default function WasteBinAgentPanel({ containers, lastJoinedContainerId }: Props) {
   const { devices, loading, error, lastFetched, load } = useSimDevices()
+
+  useEffect(() => {
+    if (lastJoinedContainerId) void load()
+  }, [lastJoinedContainerId, load])
 
   // Filter the live SSE-updated containers down to sim-registered ones only
   const simContainerIds = new Set(devices.map(d => d.containerId))

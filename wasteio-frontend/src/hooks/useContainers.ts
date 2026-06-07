@@ -123,6 +123,7 @@ export function useContainers() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastJoinedContainerId, setLastJoinedContainerId] = useState<string | null>(null)
 
   const containers = isDemo ? demoContainers : liveContainers
 
@@ -163,6 +164,18 @@ export function useContainers() {
     }
   }, [])
 
+  const handleContainerJoined = useCallback((data: string) => {
+    try {
+      const { containerId } = JSON.parse(data) as { containerId: string }
+      void getContainerByIdApi(containerId).then(container => {
+        setLiveContainers(prev => prev.some(c => c.id === container.id) ? prev : [...prev, container])
+        setLastJoinedContainerId(containerId)
+      })
+    } catch {
+      // malformed event — ignore
+    }
+  }, [])
+
   const handleStatusMessage = useCallback((data: string) => {
     try {
       const { containerId, status } = JSON.parse(data) as { containerId: string; status: string }
@@ -180,6 +193,7 @@ export function useContainers() {
     handleTelemetryMessage,
     !isDemo,
     handleStatusMessage,
+    handleContainerJoined,
   )
 
   function toggleDemo() {
@@ -266,5 +280,5 @@ export function useContainers() {
     }
   }
 
-  return { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer, streamStatus, streamAttempt, streamError, retryStream }
+  return { containers, loading, error, isDemo, toggleDemo, createContainer, updateContainer, deleteContainer, refreshContainer, streamStatus, streamAttempt, streamError, retryStream, lastJoinedContainerId }
 }

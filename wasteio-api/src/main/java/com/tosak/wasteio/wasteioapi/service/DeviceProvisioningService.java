@@ -7,6 +7,7 @@ import com.tosak.wasteio.wasteioapi.mqtt.MosquittoDynsecService;
 import com.tosak.wasteio.wasteioapi.repository.ContainerRepository;
 import com.tosak.wasteio.wasteioapi.repository.DeviceRegistrationTokenRepository;
 import com.tosak.wasteio.wasteioapi.repository.DeviceRepository;
+import com.tosak.wasteio.wasteioapi.sse.TelemetryBroadcaster;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ public class DeviceProvisioningService {
     private final ContainerRepository containerRepository;
     private final MosquittoDynsecService dynsecService;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final TelemetryBroadcaster broadcaster;
 
     @Value("${mqtt.broker.host}")
     private String mqttHost;
@@ -41,12 +43,14 @@ public class DeviceProvisioningService {
             DeviceRegistrationTokenRepository tokenRepository,
             ContainerRepository containerRepository,
             MosquittoDynsecService dynsecService,
-            BCryptPasswordEncoder passwordEncoder) {
+            BCryptPasswordEncoder passwordEncoder,
+            TelemetryBroadcaster broadcaster) {
         this.deviceRepository = deviceRepository;
         this.tokenRepository = tokenRepository;
         this.containerRepository = containerRepository;
         this.dynsecService = dynsecService;
         this.passwordEncoder = passwordEncoder;
+        this.broadcaster = broadcaster;
     }
 
     @Transactional
@@ -86,12 +90,16 @@ public class DeviceProvisioningService {
         double lng = request.getLongitude() != null ? request.getLongitude() : 0.0;
 
         Device device = getOrCreateDevice(deviceId);
-        createDeviceContainerIfNotExists(device,lat,lng);
+        boolean newContainer = createDeviceContainerIfNotExists(device, lat, lng);
 
         String mqttPassword = UUID.randomUUID().toString();
         device.setMqttPasswordHash(passwordEncoder.encode(mqttPassword));
         device.setRegisteredAt(LocalDateTime.now());
         deviceRepository.save(device);
+
+        if (newContainer) {
+            broadcaster.broadcastContainerJoined("container-" + deviceId);
+        }
 
         // upsert so this is idempotent — works on first boot and on credential refresh
         dynsecService.upsertDeviceClient(deviceId, mqttPassword);
@@ -110,25 +118,26 @@ public class DeviceProvisioningService {
     private static final WasteType[] SIM_WASTE_TYPES = WasteType.values();
     private static final Random RNG = new Random();
 
-    private void createDeviceContainerIfNotExists(Device device, double lat, double lng) {
-        if (device.getContainer() == null) {
-            String containerId = "container-" + device.getId();
-            Container container = containerRepository.findById(containerId).orElseGet(() -> {
-                int capacity = SIM_CAPACITIES.get(RNG.nextInt(SIM_CAPACITIES.size()));
-                WasteType wasteType = SIM_WASTE_TYPES[RNG.nextInt(SIM_WASTE_TYPES.length)];
-                Container c = new Container();
-                c.setId(containerId);
-                c.setName(containerId);
-                c.setLatitude(lat);
-                c.setLongitude(lng);
-                c.setLatestFillLevel(0.0);
-                c.setAddress("Simulation");
-                c.setCapacity(capacity);
-                c.setWasteType(wasteType);
-                return containerRepository.save(c);
-            });
-            device.setContainer(container);
-        }
+    private boolean createDeviceContainerIfNotExists(Device device, double lat, double lng) {
+        if (device.getContainer() != null) return false;
+        String containerId = "container-" + device.getId();
+        boolean existed = containerRepository.existsById(containerId);
+        Container container = containerRepository.findById(containerId).orElseGet(() -> {
+            int capacity = SIM_CAPACITIES.get(RNG.nextInt(SIM_CAPACITIES.size()));
+            WasteType wasteType = SIM_WASTE_TYPES[RNG.nextInt(SIM_WASTE_TYPES.length)];
+            Container c = new Container();
+            c.setId(containerId);
+            c.setName(containerId);
+            c.setLatitude(lat);
+            c.setLongitude(lng);
+            c.setLatestFillLevel(0.0);
+            c.setAddress("Simulation");
+            c.setCapacity(capacity);
+            c.setWasteType(wasteType);
+            return containerRepository.save(c);
+        });
+        device.setContainer(container);
+        return !existed;
     }
 
     @Transactional
